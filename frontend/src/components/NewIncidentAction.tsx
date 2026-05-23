@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IncidentForm } from './IncidentForm';
+import { UserSession } from './Login';
 
-export function NewIncidentAction() {
+export function NewIncidentAction({ currentUser }: { currentUser: UserSession }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
 
@@ -26,6 +27,7 @@ export function NewIncidentAction() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onSuccess={handleSuccess}
+        currentUser={currentUser}
       />
     </>
   );

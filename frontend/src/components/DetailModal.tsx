@@ -18,6 +18,7 @@ interface DetailModalProps {
   isProcessing: boolean;
   getStatusBadge: (status: string) => React.ReactNode;
   getSeverityBadge: (severity: string) => React.ReactNode;
+  currentUser: any;
 }
 
 export function DetailModal({
@@ -27,6 +28,7 @@ export function DetailModal({
   isProcessing,
   getStatusBadge,
   getSeverityBadge,
+  currentUser,
 }: DetailModalProps) {
   return (
     <div
@@ -50,7 +52,7 @@ export function DetailModal({
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        
+
         <div className="p-6 space-y-4">
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase">
@@ -65,8 +67,8 @@ export function DetailModal({
             <label className="text-xs font-semibold text-gray-500 uppercase">
               Waktu Laporan
             </label>
-            <p 
-              className="text-sm font-mono text-gray-700 mt-1" 
+            <p
+              className="text-sm font-mono text-gray-700 mt-1"
               suppressHydrationWarning
             >
               {new Date(incident.created_at).toLocaleString("id-ID", {
@@ -76,7 +78,7 @@ export function DetailModal({
                 day: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
-                second: "2-digit"
+                second: "2-digit",
               })}
             </p>
           </div>
@@ -95,7 +97,7 @@ export function DetailModal({
               {getSeverityBadge(incident.severity_level)}
             </div>
           </div>
-          
+
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">
               Deskripsi Lengkap
@@ -106,21 +108,20 @@ export function DetailModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-          <div>
-            {incident.status !== "RESOLVED" && (
-              <button
-                onClick={() => onResolve(incident.id)}
-                disabled={isProcessing}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1 disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  check_circle
-                </span>{" "}
-                Mark as Resolved
-              </button>
-            )}
-          </div>
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 items-center">
+          {currentUser.role === "Manager" && incident.status !== "RESOLVED" && (
+            <button
+              onClick={() => onResolve(incident.id)}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                check_circle
+              </span>
+              <span>{isProcessing ? "Proses..." : "Mark as Resolved"}</span>
+            </button>
+          )}
+
           <button
             onClick={onClose}
             className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50"

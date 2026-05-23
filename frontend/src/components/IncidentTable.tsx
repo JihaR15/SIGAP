@@ -8,6 +8,7 @@ import { RestoreModal } from "./RestoreModal";
 import { TableTabs } from "./TableTabs";
 import { TableFilters } from "./TableFilters";
 import { PaginationControls } from "./PaginationControls";
+import { UserSession } from "./Login";
 
 interface Incident {
   id: number;
@@ -16,6 +17,7 @@ interface Incident {
   severity_level: string;
   status: string;
   created_at: string;
+  reporter_id: number;
 }
 
 interface AuditTrail {
@@ -33,10 +35,12 @@ export function IncidentTable({
   activeData,
   deletedData,
   auditData,
+  currentUser,
 }: {
   activeData: Incident[];
   deletedData: Incident[];
   auditData: AuditTrail[];
+  currentUser: UserSession;
 }) {
   const router = useRouter();
 
@@ -242,6 +246,13 @@ export function IncidentTable({
   };
 
   const filteredActive = activeData.filter((log) => {
+    if (
+      currentUser.role === "Operator" &&
+      Number(log.reporter_id) !== currentUser.id
+    ) {
+      return false;
+    }
+
     return (
       (filterStatus === "ALL" || log.status === filterStatus) &&
       (filterSeverity === "ALL" || log.severity_level === filterSeverity) &&
@@ -265,6 +276,21 @@ export function IncidentTable({
     }
   };
 
+  const handleResetSort = () => {
+    if (activeTab === "ACTIVE") {
+      setSortColumn("severity_level");
+      setSortDirection("desc");
+    } else {
+      setSortColumn("created_at");
+      setSortDirection("desc");
+    }
+  };
+
+  const isCustomSorted =
+    activeTab === "ACTIVE"
+      ? sortColumn !== "severity_level" || sortDirection !== "desc"
+      : sortColumn !== "created_at" || sortDirection !== "desc";
+
   const SortIcon = ({ column }: { column: SortColumn }) => {
     if (sortColumn !== column)
       return (
@@ -278,6 +304,11 @@ export function IncidentTable({
   };
 
   const sortedData = [...currentTabData].sort((a: any, b: any) => {
+    if (activeTab === "ACTIVE") {
+      if (a.status === "RESOLVED" && b.status !== "RESOLVED") return 1;
+      if (b.status === "RESOLVED" && a.status !== "RESOLVED") return -1;
+    }
+
     let valA = a[sortColumn];
     let valB = b[sortColumn];
 
@@ -310,16 +341,14 @@ export function IncidentTable({
       const sevB = severityMap[b.severity_level] || 0;
       if (sevA !== sevB) return sevB - sevA;
 
-      // Waktu Tunggu (ASC: Paling Lama di Atas)
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
       return dateA - dateB;
     }
 
-    // LOGIKA B: Jika Tab Sampah / Audit Trail
     const dateA = new Date(a.created_at).getTime();
     const dateB = new Date(b.created_at).getTime();
-    return dateB - dateA; // DESC: Yang Paling Baru / Terkini ditaruh di atas
+    return dateB - dateA;
   });
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / itemsPerPage));
@@ -335,10 +364,11 @@ export function IncidentTable({
         setActiveTab={setActiveTab}
         deletedCount={deletedData.length}
         auditCount={auditData.length}
+        role={currentUser.role}
       />
 
       <div className="bg-white border-x border-b border-gray-200 rounded-b-xl shadow-sm overflow-hidden flex flex-col">
-        {activeTab === "ACTIVE" && (
+        {activeTab === "ACTIVE" ? (
           <TableFilters
             filterDate={filterDate}
             setFilterDate={setFilterDate}
@@ -348,7 +378,29 @@ export function IncidentTable({
             setFilterStatus={setFilterStatus}
             isLive={isLive}
             setIsLive={setIsLive}
+            isCustomSorted={isCustomSorted}
+            onResetSort={handleResetSort}
           />
+        ) : (
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+            <span className="text-sm font-bold text-gray-700">
+              {activeTab === "DELETED"
+                ? "Laporan Terhapus"
+                : "Catatan Audit Sistem"}
+            </span>
+
+            {isCustomSorted && (
+              <button
+                onClick={handleResetSort}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px]">
+                  restart_alt
+                </span>
+                Reset Sort
+              </button>
+            )}
+          </div>
         )}
 
         <div className="overflow-x-auto min-h-100">
@@ -486,18 +538,20 @@ export function IncidentTable({
                       </td>
                       <td className="px-4 sm:px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {log.status === "OPEN" && (
-                            <button
-                              onClick={() => handleAcknowledge(log.id)}
-                              disabled={isProcessing}
-                              className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50"
-                              title="Acknowledge"
-                            >
-                              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                                done
-                              </span>
-                            </button>
-                          )}
+                          {log.status === "OPEN" &&
+                            currentUser.role === "Manager" && (
+                              <button
+                                onClick={() => handleAcknowledge(log.id)}
+                                disabled={isProcessing}
+                                className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50"
+                                title="Acknowledge"
+                              >
+                                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
+                                  done
+                                </span>
+                              </button>
+                            )}
+
                           <button
                             onClick={() => setSelectedIncident(log)}
                             className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
@@ -507,15 +561,20 @@ export function IncidentTable({
                               info
                             </span>
                           </button>
-                          <button
-                            onClick={() => setIncidentToDelete(log.id)}
-                            className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                            title="Hapus Data"
-                          >
-                            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                              delete
-                            </span>
-                          </button>
+
+                          {(currentUser.role === "Manager" ||
+                            (currentUser.role === "Operator" &&
+                              log.status === "OPEN")) && (
+                            <button
+                              onClick={() => setIncidentToDelete(log.id)}
+                              className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Hapus Data"
+                            >
+                              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
+                                delete
+                              </span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -634,6 +693,7 @@ export function IncidentTable({
           isProcessing={isProcessing}
           getStatusBadge={getStatusBadge}
           getSeverityBadge={getSeverityBadge}
+          currentUser={currentUser}
         />
       )}
       <DeleteModal

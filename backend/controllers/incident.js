@@ -37,7 +37,7 @@ async function createIncident(req, res) {
 async function getAttentionDashboard(req, res) {
     try {
         const [rows] = await db.query(
-            `SELECT id, judul, deskripsi, severity_level, status, created_at 
+            `SELECT id, judul, deskripsi, severity_level, status, created_at, reporter_id 
              FROM incident_logs 
              WHERE is_deleted = 0
              ORDER BY 

@@ -1,15 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
+import { UserSession } from "./Login";
 
 export function IncidentForm({
   isOpen,
   onClose,
   onSuccess,
+  currentUser,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  currentUser: UserSession;
 }) {
   const [judul, setJudul] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
@@ -30,7 +33,7 @@ export function IncidentForm({
           judul,
           deskripsi,
           severity_level: severity,
-          reporter_id: 1,
+          reporter_id: currentUser.id,
         }),
       });
 
