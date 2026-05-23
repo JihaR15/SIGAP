@@ -69,6 +69,24 @@ async function softDeleteIncident(req, res) {
     }
 }
 
+async function acknowledgeSingle(req, res) {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    try {
+        await db.query(`UPDATE incident_logs SET status = 'INVESTIGATING' WHERE id = ?`, [id]);
+        
+        await db.query(
+            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) VALUES (?, ?, ?, ?)`,
+            [id, user_id || 2, 'ACKNOWLEDGED', JSON.stringify({ message: 'Status diubah ke INVESTIGATING oleh Ops Manager' })]
+        );
+
+        res.json({ message: 'Incident Acknowledged.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 async function acknowledgeAllCritical(req, res) {
     const { user_id } = req.body; 
 
@@ -148,6 +166,7 @@ module.exports = {
     createIncident,
     getAttentionDashboard,
     softDeleteIncident,
+    acknowledgeSingle,
     acknowledgeAllCritical,
     resolveIncident,
     getDeletedIncidents,

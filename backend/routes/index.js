@@ -5,6 +5,7 @@ const incidentController = require('../controllers/incident');
 router.post('/incidents', incidentController.createIncident);
 router.get('/incidents', incidentController.getAttentionDashboard);
 router.delete('/incidents/:id', incidentController.softDeleteIncident);
+router.put('/incidents/:id/acknowledge', incidentController.acknowledgeSingle);
 router.put('/incidents/acknowledge', incidentController.acknowledgeAllCritical);
 router.put('/incidents/:id/resolve', incidentController.resolveIncident);
 router.get('/incidents/archived/deleted', incidentController.getDeletedIncidents);
