@@ -162,6 +162,25 @@ async function getAuditTrails(req, res) {
     }
 }
 
+async function restoreIncident(req, res) {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    try {
+        await db.query(`UPDATE incident_logs SET is_deleted = 0 WHERE id = ?`, [id]);
+
+        await db.query(
+            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
+             VALUES (?, ?, ?, ?)`,
+            [id, user_id || 2, 'RESTORED', JSON.stringify({ message: 'Insiden dikembalikan dari kotak sampah ke log aktif.' })]
+        );
+
+        res.json({ message: 'Incident restored successfully.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     createIncident,
     getAttentionDashboard,
@@ -170,5 +189,6 @@ module.exports = {
     acknowledgeAllCritical,
     resolveIncident,
     getDeletedIncidents,
-    getAuditTrails
+    getAuditTrails,
+    restoreIncident
 };

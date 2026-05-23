@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DetailModal } from "./DetailModal";
 import { DeleteModal } from "./DeleteModal";
+import { RestoreModal } from "./RestoreModal";
 
 interface Incident {
   id: number;
@@ -42,6 +43,9 @@ export function IncidentTable({
   const [isProcessing, setIsProcessing] = useState(false);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterSeverity, setFilterSeverity] = useState("ALL");
+  const [incidentToRestore, setIncidentToRestore] = useState<number | null>(
+    null,
+  );
 
   const confirmDelete = async () => {
     if (!incidentToDelete) return;
@@ -171,6 +175,29 @@ export function IncidentTable({
       (filterSeverity === "ALL" || log.severity_level === filterSeverity)
     );
   });
+
+  const handleRestore = async () => {
+    if (!incidentToRestore) return;
+    setIsProcessing(true);
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/incidents/${incidentToRestore}/restore`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: 2 }),
+        },
+      );
+      if (res.ok) {
+        setIncidentToRestore(null); // Tutup modal setelah sukses
+        router.refresh();
+      }
+    } catch (error) {
+      alert("Gagal terhubung ke server.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <>
@@ -339,7 +366,10 @@ export function IncidentTable({
               <tbody className="divide-y divide-gray-200 bg-white">
                 {deletedData.length > 0 ? (
                   deletedData.map((log) => (
-                    <tr key={log.id} className="bg-gray-50/40 text-gray-500">
+                    <tr
+                      key={log.id}
+                      className="bg-gray-50/40 text-gray-500 hover:bg-gray-50 transition-colors group"
+                    >
                       <td
                         className="px-6 py-4 text-sm font-mono"
                         suppressHydrationWarning
@@ -358,8 +388,18 @@ export function IncidentTable({
                       <td className="px-6 py-4 opacity-60">
                         {getSeverityBadge(log.severity_level)}
                       </td>
-                      <td className="px-6 py-4 text-right text-xs italic font-semibold text-red-600">
-                        Soft Deleted
+
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => setIncidentToRestore(log.id)}
+                          disabled={isProcessing}
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors inline-flex items-center justify-center disabled:opacity-50"
+                          title="Kembalikan Log Aktif"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            restore_from_trash
+                          </span>
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -463,6 +503,13 @@ export function IncidentTable({
         isOpen={!!incidentToDelete}
         onClose={() => setIncidentToDelete(null)}
         onConfirm={confirmDelete}
+        isProcessing={isProcessing}
+      />
+
+      <RestoreModal
+        isOpen={!!incidentToRestore}
+        onClose={() => setIncidentToRestore(null)}
+        onConfirm={handleRestore}
         isProcessing={isProcessing}
       />
     </>

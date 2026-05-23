@@ -10,5 +10,6 @@ router.put('/incidents/acknowledge', incidentController.acknowledgeAllCritical);
 router.put('/incidents/:id/resolve', incidentController.resolveIncident);
 router.get('/incidents/archived/deleted', incidentController.getDeletedIncidents);
 router.get('/audit-trails', incidentController.getAuditTrails);
+router.put('/incidents/:id/restore', incidentController.restoreIncident);
 
 module.exports = router;
