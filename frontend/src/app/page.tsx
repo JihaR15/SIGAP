@@ -3,16 +3,12 @@ import { IncidentTable } from "@/components/IncidentTable";
 import { NewIncidentAction } from "@/components/NewIncidentAction";
 import { DashboardMetrics } from "@/components/DashboardMetrics";
 
-async function getIncidents() {
+async function fetchFromBackend(endpoint: string) {
   try {
-    const res = await fetch("http://localhost:3000/api/incidents", {
+    const res = await fetch(`http://localhost:3000/api/${endpoint}`, {
       cache: "no-store",
     });
-
-    if (!res.ok) {
-      throw new Error("Gagal menarik data dari API");
-    }
-
+    if (!res.ok) throw new Error(`Gagal memuat ${endpoint}`);
     return res.json();
   } catch (error) {
     console.error(error);
@@ -21,12 +17,17 @@ async function getIncidents() {
 }
 
 export default async function Dashboard() {
-  const incidents = await getIncidents();
+  const [incidents, deletedIncidents, auditTrails] = await Promise.all([
+    fetchFromBackend("incidents"),
+    fetchFromBackend("incidents/archived/deleted"),
+    fetchFromBackend("audit-trails"),
+  ]);
+
   const criticalLogs = incidents.filter(
     (log: any) => log.severity_level === "CRITICAL" && log.status === "OPEN",
   );
-  const tableLogs = incidents.filter((log: any) => 
-    !(log.severity_level === 'CRITICAL' && log.status === 'OPEN')
+  const tableLogs = incidents.filter(
+    (log: any) => !(log.severity_level === "CRITICAL" && log.status === "OPEN"),
   );
 
   return (
@@ -48,7 +49,11 @@ export default async function Dashboard() {
 
         <CriticalBanner data={criticalLogs} />
 
-        <IncidentTable data={tableLogs} />
+        <IncidentTable
+          activeData={tableLogs}
+          deletedData={deletedIncidents}
+          auditData={auditTrails}
+        />
       </div>
     </main>
   );

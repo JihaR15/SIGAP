@@ -103,9 +103,53 @@ async function acknowledgeAllCritical(req, res) {
     }
 }
 
+async function resolveIncident(req, res) {
+    const { id } = req.params;
+    const { user_id } = req.body;
+    try {
+        await db.query(`UPDATE incident_logs SET status = 'RESOLVED' WHERE id = ?`, [id]);
+        
+        await db.query(
+            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) VALUES (?, ?, ?, ?)`,
+            [id, user_id || 2, 'RESOLVED', JSON.stringify({ message: 'Insiden dinyatakan selesai (RESOLVED).' })]
+        );
+        res.json({ message: 'Incident status updated to RESOLVED.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+async function getDeletedIncidents(req, res) {
+    try {
+        const [rows] = await db.query(
+            `SELECT id, judul, deskripsi, severity_level, status, created_at FROM incident_logs WHERE is_deleted = 1 ORDER BY created_at DESC`
+        );
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+async function getAuditTrails(req, res) {
+    try {
+        const [rows] = await db.query(
+            `SELECT a.id, a.aksi, a.data_baru, a.created_at, i.judul as incident_title 
+             FROM audit_trails a
+             LEFT JOIN incident_logs i ON a.incident_id = i.id
+             ORDER BY a.created_at DESC`
+        );
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     createIncident,
     getAttentionDashboard,
     softDeleteIncident,
-    acknowledgeAllCritical
+    acknowledgeAllCritical,
+    resolveIncident,
+    getDeletedIncidents,
+    getAuditTrails
 };
