@@ -69,8 +69,43 @@ async function softDeleteIncident(req, res) {
     }
 }
 
+async function acknowledgeAllCritical(req, res) {
+    const { user_id } = req.body; 
+
+    try {
+        const [rows] = await db.query(
+            `SELECT id FROM incident_logs 
+             WHERE severity_level = 'CRITICAL' AND status = 'OPEN' AND is_deleted = 0`
+        );
+
+        if (rows.length === 0) {
+            return res.json({ message: 'Tidak ada insiden CRITICAL baru untuk di-acknowledge.' });
+        }
+
+        const ids = rows.map(r => r.id);
+
+        await db.query(
+            `UPDATE incident_logs SET status = 'INVESTIGATING' WHERE id IN (?)`,
+            [ids]
+        );
+
+        for (const id of ids) {
+            await db.query(
+                `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
+                 VALUES (?, ?, ?, ?)`,
+                [id, user_id || 2, 'ACKNOWLEDGED', JSON.stringify({ message: 'Status diubah ke INVESTIGATING oleh Ops Manager' })]
+            );
+        }
+
+        res.json({ message: `${ids.length} insiden CRITICAL berhasil di-acknowledge.` });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     createIncident,
     getAttentionDashboard,
-    softDeleteIncident
+    softDeleteIncident,
+    acknowledgeAllCritical
 };
