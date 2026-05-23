@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 interface Incident {
   id: number;
@@ -30,6 +30,8 @@ export function DetailModal({
   getSeverityBadge,
   currentUser,
 }: DetailModalProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
@@ -108,26 +110,61 @@ export function DetailModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 items-center">
-          {currentUser.role === "Manager" && incident.status !== "RESOLVED" && (
-            <button
-              onClick={() => onResolve(incident.id)}
-              disabled={isProcessing}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                check_circle
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 items-center transition-all duration-300">
+          {isConfirming ? (
+            <div className="flex items-center gap-3 w-full justify-between">
+              <span className="text-sm font-bold text-red-600 flex items-center gap-1 animate-pulse">
+                <span className="material-symbols-outlined text-[18px]">
+                  warning
+                </span>
+                Tutup insiden permanen?
               </span>
-              <span>{isProcessing ? "Proses..." : "Mark as Resolved"}</span>
-            </button>
-          )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsConfirming(false)}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => onResolve(incident.id)}
+                  disabled={isProcessing}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[18px] ">
+                    check_circle
+                  </span>
+                  <span>
+                    {isProcessing ? "Menyimpan..." : "Ya, Selesaikan"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentUser.role === "Manager" &&
+                incident.status !== "RESOLVED" && (
+                  <button
+                    onClick={() => setIsConfirming(true)}
+                    disabled={isProcessing}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      check_circle
+                    </span>
+                    <span>Mark as Resolved</span>
+                  </button>
+                )}
 
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50"
-          >
-            Tutup
-          </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50"
+              >
+                Tutup
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
