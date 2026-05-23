@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DetailModal } from "./DetailModal";
 import { DeleteModal } from "./DeleteModal";
 import { RestoreModal } from "./RestoreModal";
+import { TableTabs } from "./TableTabs";
+import { TableFilters } from "./TableFilters";
+import { PaginationControls } from "./PaginationControls";
 
 interface Incident {
   id: number;
@@ -23,6 +26,9 @@ interface AuditTrail {
   created_at: string;
 }
 
+type SortColumn = "created_at" | "judul" | "status" | "severity_level" | "aksi";
+type SortDirection = "asc" | "desc";
+
 export function IncidentTable({
   activeData,
   deletedData,
@@ -33,6 +39,7 @@ export function IncidentTable({
   auditData: AuditTrail[];
 }) {
   const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<"ACTIVE" | "DELETED" | "AUDIT">(
     "ACTIVE",
   );
@@ -40,12 +47,55 @@ export function IncidentTable({
     null,
   );
   const [incidentToDelete, setIncidentToDelete] = useState<number | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("ALL");
-  const [filterSeverity, setFilterSeverity] = useState("ALL");
   const [incidentToRestore, setIncidentToRestore] = useState<number | null>(
     null,
   );
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLive, setIsLive] = useState(true);
+
+  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [filterSeverity, setFilterSeverity] = useState("ALL");
+  const [filterDate, setFilterDate] = useState("ALL");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("severity_level");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const itemsPerPage = 10;
+
+  React.useEffect(() => {
+    if (!isLive) return;
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isLive, router]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+    if (activeTab === "ACTIVE") {
+      setSortColumn("severity_level");
+      setSortDirection("desc");
+    } else {
+      setSortColumn("created_at");
+      setSortDirection("desc");
+    }
+  }, [activeTab, filterStatus, filterSeverity, filterDate]);
+
+  const checkDateFilter = (dateStr: string) => {
+    if (filterDate === "ALL") return true;
+    const date = new Date(dateStr);
+    const today = new Date();
+
+    if (filterDate === "TODAY") {
+      return date.toDateString() === today.toDateString();
+    }
+    if (filterDate === "THIS_WEEK") {
+      const weekAgo = new Date();
+      weekAgo.setDate(today.getDate() - 7);
+      return date >= weekAgo;
+    }
+    return true;
+  };
 
   const confirmDelete = async () => {
     if (!incidentToDelete) return;
@@ -87,8 +137,7 @@ export function IncidentTable({
       }
     } catch (error) {
       alert("Koneksi bermasalah");
-    }
-    {
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -107,6 +156,29 @@ export function IncidentTable({
       if (res.ok) router.refresh();
     } catch (error) {
       alert("Gagal memproses Acknowledge");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!incidentToRestore) return;
+    setIsProcessing(true);
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/incidents/${incidentToRestore}/restore`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: 2 }),
+        },
+      );
+      if (res.ok) {
+        setIncidentToRestore(null);
+        router.refresh();
+      }
+    } catch (error) {
+      alert("Gagal terhubung ke server.");
     } finally {
       setIsProcessing(false);
     }
@@ -172,231 +244,311 @@ export function IncidentTable({
   const filteredActive = activeData.filter((log) => {
     return (
       (filterStatus === "ALL" || log.status === filterStatus) &&
-      (filterSeverity === "ALL" || log.severity_level === filterSeverity)
+      (filterSeverity === "ALL" || log.severity_level === filterSeverity) &&
+      checkDateFilter(log.created_at)
     );
   });
 
-  const handleRestore = async () => {
-    if (!incidentToRestore) return;
-    setIsProcessing(true);
-    try {
-      const res = await fetch(
-        `http://localhost:3000/api/incidents/${incidentToRestore}/restore`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
-        },
-      );
-      if (res.ok) {
-        setIncidentToRestore(null); // Tutup modal setelah sukses
-        router.refresh();
-      }
-    } catch (error) {
-      alert("Gagal terhubung ke server.");
-    } finally {
-      setIsProcessing(false);
+  const currentTabData =
+    activeTab === "ACTIVE"
+      ? filteredActive
+      : activeTab === "DELETED"
+        ? deletedData
+        : auditData;
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
     }
   };
 
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column)
+      return (
+        <span className="text-[11px] text-gray-400 ml-1 font-sans">⇅</span>
+      );
+    return (
+      <span className="text-[12px] font-bold text-blue-600 ml-1 font-sans">
+        {sortDirection === "asc" ? "↑" : "↓"}
+      </span>
+    );
+  };
+
+  const sortedData = [...currentTabData].sort((a: any, b: any) => {
+    let valA = a[sortColumn];
+    let valB = b[sortColumn];
+
+    const severityMap: any = { INFO: 1, WARNING: 2, CRITICAL: 3 };
+    const statusMap: any = { RESOLVED: 1, INVESTIGATING: 2, OPEN: 3 };
+
+    if (sortColumn === "severity_level") {
+      valA = severityMap[valA] || 0;
+      valB = severityMap[valB] || 0;
+    } else if (sortColumn === "status") {
+      valA = statusMap[valA] || 0;
+      valB = statusMap[valB] || 0;
+    } else if (sortColumn === "created_at") {
+      valA = new Date(valA).getTime();
+      valB = new Date(valB).getTime();
+    } else if (activeTab === "AUDIT" && sortColumn === "judul") {
+      valA = a.incident_title || "";
+      valB = b.incident_title || "";
+    }
+
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+
+    if (activeTab === "ACTIVE") {
+      const statA = statusMap[a.status] || 0;
+      const statB = statusMap[b.status] || 0;
+      if (statA !== statB) return statB - statA;
+
+      const sevA = severityMap[a.severity_level] || 0;
+      const sevB = severityMap[b.severity_level] || 0;
+      if (sevA !== sevB) return sevB - sevA;
+
+      // Waktu Tunggu (ASC: Paling Lama di Atas)
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateA - dateB;
+    }
+
+    // LOGIKA B: Jika Tab Sampah / Audit Trail
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return dateB - dateA; // DESC: Yang Paling Baru / Terkini ditaruh di atas
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / itemsPerPage));
+  const paginatedData = sortedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
   return (
     <>
-      <div className="flex border-b bg-white px-4 rounded-t-xl border-t border-x border-gray-200 mt-6">
-        <button
-          onClick={() => setActiveTab("ACTIVE")}
-          className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "ACTIVE" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            list_alt
-          </span>{" "}
-          Log Aktif
-        </button>
-        <button
-          onClick={() => setActiveTab("DELETED")}
-          className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "DELETED" ? "border-red-600 text-red-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            delete_history
-          </span>{" "}
-          Sampah / Terhapus ({deletedData.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("AUDIT")}
-          className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 ${activeTab === "AUDIT" ? "border-purple-600 text-purple-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            history_toggle_off
-          </span>{" "}
-          Audit Trail ({auditData.length})
-        </button>
-      </div>
+      <TableTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        deletedCount={deletedData.length}
+        auditCount={auditData.length}
+      />
 
-      <div className="bg-white border-x border-b border-gray-200 rounded-b-xl shadow-sm overflow-hidden">
+      <div className="bg-white border-x border-b border-gray-200 rounded-b-xl shadow-sm overflow-hidden flex flex-col">
         {activeTab === "ACTIVE" && (
-          <>
-            <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap justify-between items-center gap-3 bg-gray-50/50">
-              <span className="text-sm font-bold text-gray-700">
-                Daftar Monitor Utama
-              </span>
-              <div className="flex items-center gap-3">
-                <select
-                  value={filterSeverity}
-                  onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="text-xs font-semibold text-gray-700 border border-gray-300 rounded-lg px-2 py-1.5 bg-white"
-                >
-                  <option value="ALL">Semua Severity</option>
-                  <option value="INFO">INFO</option>
-                  <option value="WARNING">WARNING</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                </select>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="text-xs font-semibold text-gray-700 border border-gray-300 rounded-lg px-2 py-1.5 bg-white"
-                >
-                  <option value="ALL">Semua Status</option>
-                  <option value="OPEN">OPEN</option>
-                  <option value="INVESTIGATING">INVESTIGATING</option>
-                  <option value="RESOLVED">RESOLVED</option>
-                </select>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left table-auto">
-                <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 font-medium">Waktu</th>
-                    <th className="px-6 py-3 font-medium">Judul Insiden</th>
-                    <th className="px-6 py-3 font-medium">Status</th>
-                    <th className="px-6 py-3 font-medium">Severity</th>
-                    <th className="px-6 py-3 font-medium text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {filteredActive.length > 0 ? (
-                    filteredActive.map((log) => (
-                      <tr
-                        key={log.id}
-                        className="hover:bg-gray-50/80 transition-colors group"
-                      >
-                        <td
-                          className="px-6 py-4 text-sm text-gray-500 font-mono"
-                          suppressHydrationWarning
-                        >
-                          {new Date(log.created_at).toLocaleString("id-ID", {
-                            dateStyle: "short",
-                            timeStyle: "medium",
-                          })}
-                        </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">
-                          {log.judul}
-                        </td>
-                        <td className="px-6 py-4">
-                          {getStatusBadge(log.status)}
-                        </td>
-                        <td className="px-6 py-4">
-                          {getSeverityBadge(log.severity_level)}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {log.status === "OPEN" && (
-                              <button
-                                onClick={() => handleAcknowledge(log.id)}
-                                disabled={isProcessing}
-                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50"
-                                title="Acknowledge"
-                              >
-                                <span className="material-symbols-outlined text-[20px]">
-                                  done
-                                </span>
-                              </button>
-                            )}
-
-                            <button
-                              onClick={() => setSelectedIncident(log)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">
-                                info
-                              </span>
-                            </button>
-
-                            <button
-                              onClick={() => setIncidentToDelete(log.id)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">
-                                delete
-                              </span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-6 py-8 text-center text-sm text-gray-500"
-                      >
-                        Tidak ada log data aktif.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
+          <TableFilters
+            filterDate={filterDate}
+            setFilterDate={setFilterDate}
+            filterSeverity={filterSeverity}
+            setFilterSeverity={setFilterSeverity}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            isLive={isLive}
+            setIsLive={setIsLive}
+          />
         )}
 
-        {activeTab === "DELETED" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left table-auto">
-              <thead className="bg-red-50/50 text-xs font-semibold uppercase text-red-700 border-b border-gray-200">
+        <div className="overflow-x-auto min-h-100">
+          <table className="w-full text-left table-auto">
+            <thead
+              className={`text-xs font-semibold uppercase border-b border-gray-200 select-none ${
+                activeTab === "ACTIVE"
+                  ? "bg-gray-50 text-gray-500"
+                  : activeTab === "DELETED"
+                    ? "bg-red-50/50 text-red-700"
+                    : "bg-purple-50/50 text-purple-700"
+              }`}
+            >
+              {activeTab === "ACTIVE" && (
                 <tr>
-                  <th className="px-6 py-3 font-medium">Waktu Hapus</th>
-                  <th className="px-6 py-3 font-medium">Judul Laporan</th>
-                  <th className="px-6 py-3 font-medium">Status Terakhir</th>
-                  <th className="px-6 py-3 font-medium">Severity</th>
-                  <th className="px-6 py-3 font-medium text-right">
-                    Keterangan
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap cursor-pointer hover:bg-gray-200/50 transition-colors"
+                    onClick={() => handleSort("created_at")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Waktu <SortIcon column="created_at" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium min-w-50 cursor-pointer hover:bg-gray-200/50 transition-colors"
+                    onClick={() => handleSort("judul")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Judul Insiden <SortIcon column="judul" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium cursor-pointer hover:bg-gray-200/50 transition-colors"
+                    onClick={() => handleSort("status")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Status <SortIcon column="status" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium cursor-pointer hover:bg-gray-200/50 transition-colors"
+                    onClick={() => handleSort("severity_level")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Severity <SortIcon column="severity_level" />
+                    </div>
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 font-medium text-right">
+                    Aksi
                   </th>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {deletedData.length > 0 ? (
-                  deletedData.map((log) => (
+              )}
+              {activeTab === "DELETED" && (
+                <tr>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap cursor-pointer hover:bg-red-100/50 transition-colors"
+                    onClick={() => handleSort("created_at")}
+                  >
+                    <div className="flex items-center gap-1 text-red-700">
+                      Waktu Hapus <SortIcon column="created_at" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium min-w-50 cursor-pointer hover:bg-red-100/50 transition-colors"
+                    onClick={() => handleSort("judul")}
+                  >
+                    <div className="flex items-center gap-1 text-red-700">
+                      Judul Laporan <SortIcon column="judul" />
+                    </div>
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 font-medium">
+                    Status Terakhir
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 font-medium text-right">
+                    Aksi
+                  </th>
+                </tr>
+              )}
+              {activeTab === "AUDIT" && (
+                <tr>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap cursor-pointer hover:bg-purple-100/50 transition-colors"
+                    onClick={() => handleSort("created_at")}
+                  >
+                    <div className="flex items-center gap-1 text-purple-700">
+                      Waktu Log <SortIcon column="created_at" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium min-w-37.5 cursor-pointer hover:bg-purple-100/50 transition-colors"
+                    onClick={() => handleSort("judul")}
+                  >
+                    <div className="flex items-center gap-1 text-purple-700">
+                      Insiden <SortIcon column="judul" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-4 sm:px-6 py-3 font-medium cursor-pointer hover:bg-purple-100/50 transition-colors"
+                    onClick={() => handleSort("aksi")}
+                  >
+                    <div className="flex items-center gap-1 text-purple-700">
+                      Aksi <SortIcon column="aksi" />
+                    </div>
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 font-medium">Detail</th>
+                </tr>
+              )}
+            </thead>
+
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {paginatedData.length > 0 ? (
+                activeTab === "ACTIVE" ? (
+                  (paginatedData as Incident[]).map((log) => (
+                    <tr
+                      key={log.id}
+                      className="hover:bg-gray-50/80 transition-colors group"
+                    >
+                      <td
+                        className="px-4 sm:px-6 py-4 text-sm text-gray-500 font-mono whitespace-nowrap"
+                        suppressHydrationWarning
+                      >
+                        {new Date(log.created_at).toLocaleString("id-ID", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+                        {log.judul}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4">
+                        {getStatusBadge(log.status)}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4">
+                        {getSeverityBadge(log.severity_level)}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {log.status === "OPEN" && (
+                            <button
+                              onClick={() => handleAcknowledge(log.id)}
+                              disabled={isProcessing}
+                              className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50"
+                              title="Acknowledge"
+                            >
+                              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
+                                done
+                              </span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setSelectedIncident(log)}
+                            className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                            title="Detail Info"
+                          >
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
+                              info
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setIncidentToDelete(log.id)}
+                            className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="Hapus Data"
+                          >
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
+                              delete
+                            </span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : activeTab === "DELETED" ? (
+                  (paginatedData as Incident[]).map((log) => (
                     <tr
                       key={log.id}
                       className="bg-gray-50/40 text-gray-500 hover:bg-gray-50 transition-colors group"
                     >
                       <td
-                        className="px-6 py-4 text-sm font-mono"
+                        className="px-4 sm:px-6 py-4 text-sm font-mono whitespace-nowrap"
                         suppressHydrationWarning
                       >
                         {new Date(log.created_at).toLocaleString("id-ID", {
                           dateStyle: "short",
-                          timeStyle: "medium",
+                          timeStyle: "short",
                         })}
                       </td>
-                      <td className="px-6 py-4 font-medium line-through">
+                      <td className="px-4 sm:px-6 py-4 font-medium line-through">
                         {log.judul}
                       </td>
-                      <td className="px-6 py-4 opacity-60">
+                      <td className="px-4 sm:px-6 py-4 opacity-60">
                         {getStatusBadge(log.status)}
                       </td>
-                      <td className="px-6 py-4 opacity-60">
-                        {getSeverityBadge(log.severity_level)}
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 sm:px-6 py-4 text-right">
                         <button
                           onClick={() => setIncidentToRestore(log.id)}
                           disabled={isProcessing}
-                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors inline-flex items-center justify-center disabled:opacity-50"
-                          title="Kembalikan Log Aktif"
+                          className="p-1 sm:p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
+                          title="Kembalikan Log"
                         >
-                          <span className="material-symbols-outlined text-[20px]">
+                          <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
                             restore_from_trash
                           </span>
                         </button>
@@ -404,34 +556,7 @@ export function IncidentTable({
                     </tr>
                   ))
                 ) : (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-8 text-center text-sm text-gray-500"
-                    >
-                      Kotak sampah kosong. All clear!
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === "AUDIT" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left table-auto">
-              <thead className="bg-purple-50/50 text-xs font-semibold uppercase text-purple-700 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 font-medium">Waktu Log</th>
-                  <th className="px-6 py-3 font-medium">Referensi Insiden</th>
-                  <th className="px-6 py-3 font-medium">Aksi</th>
-                  <th className="px-6 py-3 font-medium">Detail Mutasi Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {auditData.length > 0 ? (
-                  auditData.map((trail) => {
+                  (paginatedData as AuditTrail[]).map((trail) => {
                     let parsedData = { message: "" };
                     try {
                       parsedData =
@@ -439,21 +564,26 @@ export function IncidentTable({
                           ? JSON.parse(trail.data_baru)
                           : trail.data_baru;
                     } catch (e) {}
-
                     return (
-                      <tr key={trail.id} className="text-sm text-gray-600">
+                      <tr
+                        key={trail.id}
+                        className="text-sm text-gray-600 hover:bg-gray-50"
+                      >
                         <td
-                          className="px-6 py-4 font-mono text-xs"
+                          className="px-4 sm:px-6 py-4 font-mono text-xs whitespace-nowrap"
                           suppressHydrationWarning
                         >
-                          {new Date(trail.created_at).toLocaleString("id-ID")}
+                          {new Date(trail.created_at).toLocaleString("id-ID", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          })}
                         </td>
-                        <td className="px-6 py-4 font-semibold text-gray-900">
+                        <td className="px-4 sm:px-6 py-4 font-semibold text-gray-900">
                           {trail.incident_title || "N/A (Deleted)"}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 sm:px-6 py-4">
                           <span
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded whitespace-nowrap ${
                               trail.aksi === "CREATED"
                                 ? "bg-green-100 text-green-800"
                                 : trail.aksi === "RESOLVED"
@@ -466,26 +596,34 @@ export function IncidentTable({
                             {trail.aksi}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-xs font-medium text-gray-500">
+                        <td className="px-4 sm:px-6 py-4 text-xs font-medium text-gray-500 min-w-50">
                           {parsedData?.message || JSON.stringify(parsedData)}
                         </td>
                       </tr>
                     );
                   })
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-sm text-gray-500"
-                    >
-                      Belum ada riwayat aktivitas sistem tercatat.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                )
+              ) : (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-12 text-center text-sm text-gray-500"
+                  >
+                    Tidak ada data yang tersedia di tab ini.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <PaginationControls
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          totalPages={totalPages}
+          totalItems={sortedData.length}
+          itemsPerPage={itemsPerPage}
+        />
       </div>
 
       {selectedIncident && (
@@ -498,14 +636,12 @@ export function IncidentTable({
           getSeverityBadge={getSeverityBadge}
         />
       )}
-
       <DeleteModal
         isOpen={!!incidentToDelete}
         onClose={() => setIncidentToDelete(null)}
         onConfirm={confirmDelete}
         isProcessing={isProcessing}
       />
-
       <RestoreModal
         isOpen={!!incidentToRestore}
         onClose={() => setIncidentToRestore(null)}
