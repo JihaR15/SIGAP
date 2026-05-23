@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { UserSession } from "./Login";
 
 interface Incident {
   id: number;
@@ -12,7 +13,13 @@ interface Incident {
   created_at: string;
 }
 
-export function CriticalBanner({ data }: { data: Incident[] }) {
+export function CriticalBanner({
+  data,
+  currentUser,
+}: {
+  data: Incident[];
+  currentUser: UserSession;
+}) {
   const router = useRouter();
 
   const [processingTarget, setProcessingTarget] = useState<
@@ -31,7 +38,7 @@ export function CriticalBanner({ data }: { data: Incident[] }) {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
+          body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
 
@@ -55,7 +62,7 @@ export function CriticalBanner({ data }: { data: Incident[] }) {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
+          body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
 
@@ -88,16 +95,18 @@ export function CriticalBanner({ data }: { data: Incident[] }) {
           </h2>
         </div>
 
-        <button
-          onClick={handleAcknowledgeAll}
-          disabled={processingTarget !== null}
-          className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-1 transition-colors disabled:opacity-50"
-        >
-          <span className="material-symbols-outlined text-[16px]">
-            done_all
-          </span>
-          {processingTarget === "ALL" ? "Processing..." : "Acknowledge All"}
-        </button>
+        {currentUser.role === "MANAGER" && (
+          <button
+            onClick={handleAcknowledgeAll}
+            disabled={processingTarget !== null}
+            className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-1 transition-colors disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[16px]">
+              done_all
+            </span>
+            {processingTarget === "ALL" ? "Processing..." : "Acknowledge All"}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
@@ -134,20 +143,22 @@ export function CriticalBanner({ data }: { data: Incident[] }) {
               {incident.deskripsi}
             </p>
 
-            <div className="mt-auto border-t border-red-100 pt-3">
-              <button
-                onClick={() => handleAcknowledgeSingle(incident.id)}
-                disabled={processingTarget !== null}
-                className="w-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 py-1.5 rounded flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  done
-                </span>
-                {processingTarget === incident.id
-                  ? "Memproses..."
-                  : "Acknowledge"}
-              </button>
-            </div>
+            {currentUser.role === "MANAGER" && (
+              <div className="mt-auto border-t border-red-100 pt-3">
+                <button
+                  onClick={() => handleAcknowledgeSingle(incident.id)}
+                  disabled={processingTarget !== null}
+                  className="w-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 py-1.5 rounded flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    done
+                  </span>
+                  {processingTarget === incident.id
+                    ? "Memproses..."
+                    : "Acknowledge"}
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

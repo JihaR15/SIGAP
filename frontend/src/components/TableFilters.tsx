@@ -9,6 +9,8 @@ interface TableFiltersProps {
   setFilterStatus: (val: string) => void;
   isLive: boolean;
   setIsLive: (val: boolean) => void;
+  isCustomSorted: boolean;
+  onResetSort: () => void;
 }
 
 export function TableFilters({
@@ -20,12 +22,25 @@ export function TableFilters({
   setFilterStatus,
   isLive,
   setIsLive,
+  isCustomSorted,
+  onResetSort,
 }: TableFiltersProps) {
   return (
     <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-50/50">
-      <span className="text-sm font-bold text-gray-700 hidden sm:inline">
-        Monitor Utama
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-bold text-gray-700 hidden sm:inline">Monitor Utama</span>
+        
+        {isCustomSorted && (
+          <button
+            onClick={onResetSort}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+            Reset Sort
+          </button>
+        )}
+      </div>
+      
       <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <select
           value={filterDate}
@@ -64,10 +79,7 @@ export function TableFilters({
             checked={isLive}
             onChange={(e) => setIsLive(e.target.checked)}
           />
-          <label
-            htmlFor="live-stream"
-            className="text-xs font-semibold uppercase text-gray-600 cursor-pointer"
-          >
+          <label htmlFor="live-stream" className="text-xs font-semibold uppercase text-gray-600 cursor-pointer">
             {isLive ? "🔴 Live" : "⚪ Off"}
           </label>
         </div>
