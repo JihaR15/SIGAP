@@ -138,7 +138,7 @@ export function Login({ onLogin }: LoginProps) {
                   verified_user
                 </span>
                 <span className="text-xs font-bold">
-                  Tes Intern PT. Greenfields
+                  Tes Intern PT. Greenfields Indonesia
                 </span>
               </div>
             </div>

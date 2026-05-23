@@ -82,7 +82,7 @@ export function DashboardView({
             <span className="text-xl font-bold text-blue-700 tracking-tight leading-none">
               SIGAP
             </span>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1 truncate max-w-[200px] sm:max-w-none block">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1 truncate max-w-50 sm:max-w-none block">
               Sistem Informasi Gangguan dan Audit Perusahaan
             </span>
           </div>
@@ -121,7 +121,7 @@ export function DashboardView({
         >
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Hi, {currentUser.nama} 👋
+              Hi, {currentUser.nama}
             </h1>
             <p className="text-gray-500 mt-1.5 text-sm sm:text-base max-w-2xl">
               {currentUser.role === "Operator"
