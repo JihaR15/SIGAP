@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DetailModal } from "./DetailModal";
+import { DeleteModal } from "./DeleteModal";
 
 interface Incident {
   id: number;
@@ -83,6 +85,25 @@ export function IncidentTable({
       alert("Koneksi bermasalah");
     }
     {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAcknowledge = async (id: number) => {
+    setIsProcessing(true);
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/incidents/${id}/acknowledge`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: 2 }),
+        },
+      );
+      if (res.ok) router.refresh();
+    } catch (error) {
+      alert("Gagal memproses Acknowledge");
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -251,6 +272,19 @@ export function IncidentTable({
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {log.status === "OPEN" && (
+                              <button
+                                onClick={() => handleAcknowledge(log.id)}
+                                disabled={isProcessing}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50"
+                                title="Acknowledge"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">
+                                  done
+                                </span>
+                              </button>
+                            )}
+
                             <button
                               onClick={() => setSelectedIncident(log)}
                               className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
@@ -259,6 +293,7 @@ export function IncidentTable({
                                 info
                               </span>
                             </button>
+
                             <button
                               onClick={() => setIncidentToDelete(log.id)}
                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
@@ -414,126 +449,22 @@ export function IncidentTable({
       </div>
 
       {selectedIncident && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
-          onMouseDown={(e) =>
-            e.target === e.currentTarget && setSelectedIncident(null)
-          }
-        >
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600">
-                  receipt_long
-                </span>
-                <h2 className="text-lg font-bold text-gray-900">
-                  Detail Insiden #{selectedIncident.id}
-                </h2>
-              </div>
-              <button
-                onClick={() => setSelectedIncident(null)}
-                className="text-gray-400 hover:text-gray-700"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase">
-                  Judul Masalah
-                </label>
-                <p className="text-base font-medium text-gray-900 mt-1">
-                  {selectedIncident.judul}
-                </p>
-              </div>
-              <div className="flex gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">
-                    Status
-                  </label>
-                  {getStatusBadge(selectedIncident.status)}
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">
-                    Severity
-                  </label>
-                  {getSeverityBadge(selectedIncident.severity_level)}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase block mb-1">
-                  Deskripsi Lengkap
-                </label>
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-800 whitespace-pre-line leading-relaxed">
-                  {selectedIncident.deskripsi}
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-              <div>
-                {selectedIncident.status !== "RESOLVED" && (
-                  <button
-                    onClick={() => handleResolve(selectedIncident.id)}
-                    disabled={isProcessing}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1 disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      check_circle
-                    </span>{" "}
-                    Mark as Resolved
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => setSelectedIncident(null)}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
+        <DetailModal
+          incident={selectedIncident}
+          onClose={() => setSelectedIncident(null)}
+          onResolve={handleResolve}
+          isProcessing={isProcessing}
+          getStatusBadge={getStatusBadge}
+          getSeverityBadge={getSeverityBadge}
+        />
       )}
 
-      {incidentToDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm"
-          onMouseDown={(e) =>
-            e.target === e.currentTarget &&
-            !isProcessing &&
-            setIncidentToDelete(null)
-          }
-        >
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm border border-gray-200 text-center p-6">
-            <span className="material-symbols-outlined text-red-500 text-5xl mb-4">
-              warning
-            </span>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">
-              Hapus Log Insiden?
-            </h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Aksi ini akan menyembunyikan data dari dashboard monitor. Riwayat
-              mutasi data tetap tersimpan aman di berkas Audit Trail.
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setIncidentToDelete(null)}
-                disabled={isProcessing}
-                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg"
-              >
-                Batal
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={isProcessing}
-                className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
-              >
-                Ya, Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteModal
+        isOpen={!!incidentToDelete}
+        onClose={() => setIncidentToDelete(null)}
+        onConfirm={confirmDelete}
+        isProcessing={isProcessing}
+      />
     </>
   );
 }
