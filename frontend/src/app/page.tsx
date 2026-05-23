@@ -1,7 +1,7 @@
 import { CriticalBanner } from "@/components/CriticalBanner";
 import { IncidentTable } from "@/components/IncidentTable";
 import { NewIncidentAction } from "@/components/NewIncidentAction";
-import { DashboardMetrics } from '@/components/DashboardMetrics';
+import { DashboardMetrics } from "@/components/DashboardMetrics";
 
 async function getIncidents() {
   try {
@@ -22,12 +22,11 @@ async function getIncidents() {
 
 export default async function Dashboard() {
   const incidents = await getIncidents();
-
   const criticalLogs = incidents.filter(
-    (log: any) => log.severity_level === "CRITICAL",
+    (log: any) => log.severity_level === "CRITICAL" && log.status === "OPEN",
   );
-  const normalLogs = incidents.filter(
-    (log: any) => log.severity_level !== "CRITICAL",
+  const tableLogs = incidents.filter((log: any) => 
+    !(log.severity_level === 'CRITICAL' && log.status === 'OPEN')
   );
 
   return (
@@ -49,7 +48,7 @@ export default async function Dashboard() {
 
         <CriticalBanner data={criticalLogs} />
 
-        <IncidentTable data={normalLogs} />
+        <IncidentTable data={tableLogs} />
       </div>
     </main>
   );
