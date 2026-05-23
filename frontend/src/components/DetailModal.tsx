@@ -61,7 +61,6 @@ export function DetailModal({
             </p>
           </div>
 
-          {/* BAGIAN WAKTU YANG DITAMBAHKAN KEMBALI */}
           <div>
             <label className="text-xs font-semibold text-gray-500 uppercase">
               Waktu Laporan
