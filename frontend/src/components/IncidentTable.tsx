@@ -247,7 +247,7 @@ export function IncidentTable({
 
   const filteredActive = activeData.filter((log) => {
     if (
-      currentUser.role === "OPERATOR" &&
+      currentUser.role === "Operator" &&
       Number(log.reporter_id) !== currentUser.id
     ) {
       return false;
@@ -368,7 +368,7 @@ export function IncidentTable({
       />
 
       <div className="bg-white border-x border-b border-gray-200 rounded-b-xl shadow-sm overflow-hidden flex flex-col">
-        {activeTab === "ACTIVE" && (
+        {activeTab === "ACTIVE" ? (
           <TableFilters
             filterDate={filterDate}
             setFilterDate={setFilterDate}
@@ -381,6 +381,26 @@ export function IncidentTable({
             isCustomSorted={isCustomSorted}
             onResetSort={handleResetSort}
           />
+        ) : (
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+            <span className="text-sm font-bold text-gray-700">
+              {activeTab === "DELETED"
+                ? "Laporan Terhapus"
+                : "Catatan Audit Sistem"}
+            </span>
+
+            {isCustomSorted && (
+              <button
+                onClick={handleResetSort}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px]">
+                  restart_alt
+                </span>
+                Reset Sort
+              </button>
+            )}
+          </div>
         )}
 
         <div className="overflow-x-auto min-h-100">
@@ -519,7 +539,7 @@ export function IncidentTable({
                       <td className="px-4 sm:px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {log.status === "OPEN" &&
-                            currentUser.role === "MANAGER" && (
+                            currentUser.role === "Manager" && (
                               <button
                                 onClick={() => handleAcknowledge(log.id)}
                                 disabled={isProcessing}
@@ -542,8 +562,8 @@ export function IncidentTable({
                             </span>
                           </button>
 
-                          {(currentUser.role === "MANAGER" ||
-                            (currentUser.role === "OPERATOR" &&
+                          {(currentUser.role === "Manager" ||
+                            (currentUser.role === "Operator" &&
                               log.status === "OPEN")) && (
                             <button
                               onClick={() => setIncidentToDelete(log.id)}

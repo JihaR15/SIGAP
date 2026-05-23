@@ -71,7 +71,7 @@ export function TableFilters({
           <option value="INVESTIGATING">INVESTIGATING</option>
           <option value="RESOLVED">RESOLVED</option>
         </select>
-        <div className="hidden sm:flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
+        <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
           <input
             id="live-stream"
             type="checkbox"

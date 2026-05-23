@@ -5,7 +5,7 @@ interface TableTabsProps {
   setActiveTab: (tab: "ACTIVE" | "DELETED" | "AUDIT") => void;
   deletedCount: number;
   auditCount: number;
-  role: "MANAGER" | "OPERATOR";
+  role: "Manager" | "Operator";
 }
 
 export function TableTabs({
@@ -27,7 +27,7 @@ export function TableTabs({
         <span className="hidden sm:inline">Log Aktif</span>
       </button>
 
-      {role === "MANAGER" && (
+      {role === "Manager" && (
         <>
           <button
             onClick={() => setActiveTab("DELETED")}

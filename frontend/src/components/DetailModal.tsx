@@ -109,8 +109,7 @@ export function DetailModal({
         </div>
 
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 items-center">
-          
-          {currentUser.role === "MANAGER" && incident.status !== "RESOLVED" && (
+          {currentUser.role === "Manager" && incident.status !== "RESOLVED" && (
             <button
               onClick={() => onResolve(incident.id)}
               disabled={isProcessing}

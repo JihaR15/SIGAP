@@ -80,28 +80,27 @@ export function CriticalBanner({
 
   return (
     <section
-      className="bg-red-50 border-b border-red-500 px-6 py-4 flex flex-col gap-4 relative mt-6 rounded-xl shadow-sm"
+      className="bg-red-50 border-b border-red-500 p-4 sm:px-6 sm:py-4 flex flex-col gap-4 relative mt-6 rounded-xl shadow-sm"
       suppressHydrationWarning
     >
       <div className="absolute top-0 left-0 w-1 h-full bg-red-600"></div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-red-700">
-          <span className="material-symbols-outlined animate-pulse font-bold text-[28px]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-start sm:items-center gap-2 text-red-700">
+          <span className="material-symbols-outlined animate-pulse font-bold text-[24px] sm:text-[28px] mt-0.5 sm:mt-0">
             emergency_home
           </span>
-          <h2 className="text-xl font-bold text-red-900">
+          <h2 className="text-lg sm:text-xl font-bold text-red-900 leading-tight">
             Critical System Alerts ({activeCriticals.length})
           </h2>
         </div>
 
-        {currentUser.role === "MANAGER" && (
+        {currentUser.role === "Manager" && (
           <button
             onClick={handleAcknowledgeAll}
             disabled={processingTarget !== null}
-            className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded flex items-center gap-1 transition-colors disabled:opacity-50"
+            className="w-full sm:w-auto text-xs font-bold text-white bg-red-600 hover:bg-red-700 px-4 py-2.5 sm:py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shadow-sm"
           >
-            <span className="material-symbols-outlined text-[16px]">
+            <span className="material-symbols-outlined text-[18px] sm:text-[16px]">
               done_all
             </span>
             {processingTarget === "ALL" ? "Processing..." : "Acknowledge All"}
@@ -109,7 +108,7 @@ export function CriticalBanner({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
         {activeCriticals.map((incident) => (
           <div
             key={incident.id}
@@ -143,12 +142,12 @@ export function CriticalBanner({
               {incident.deskripsi}
             </p>
 
-            {currentUser.role === "MANAGER" && (
+            {currentUser.role === "Manager" && (
               <div className="mt-auto border-t border-red-100 pt-3">
                 <button
                   onClick={() => handleAcknowledgeSingle(incident.id)}
                   disabled={processingTarget !== null}
-                  className="w-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 py-1.5 rounded flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+                  className="w-full text-xs font-bold text-white bg-red-500 hover:bg-red-600 py-2 sm:py-1.5 rounded-lg sm:rounded flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">
                     done
