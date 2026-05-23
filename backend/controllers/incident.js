@@ -4,6 +4,14 @@ async function createIncident(req, res) {
     const { judul, deskripsi, severity_level, reporter_id } = req.body;
     
     try {
+        const [userRows] = await db.query(`SELECT nama, role FROM users WHERE id = ?`, [reporter_id]);
+        
+        let reporterName = `User ID ${reporter_id}`;
+        if (userRows.length > 0) {
+            const user = userRows[0];
+            reporterName = `${user.nama} (${user.role})`; 
+        }
+
         const [result] = await db.query(
             `INSERT INTO incident_logs (judul, deskripsi, severity_level, reporter_id) 
              VALUES (?, ?, ?, ?)`,
@@ -12,10 +20,12 @@ async function createIncident(req, res) {
         
         const newIncidentId = result.insertId;
 
+        const logMessage = `Melaporkan insiden "${judul}" (${severity_level}) — oleh ${reporterName}.`;
+
         await db.query(
             `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
              VALUES (?, ?, ?, ?)`,
-            [newIncidentId, reporter_id, 'CREATED', JSON.stringify(req.body)]
+            [newIncidentId, reporter_id, 'CREATED', JSON.stringify({ message: logMessage })]
         );
 
         res.status(201).json({ message: 'Incident logged successfully', id: newIncidentId });
