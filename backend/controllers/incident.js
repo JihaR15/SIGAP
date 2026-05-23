@@ -24,13 +24,12 @@ async function createIncident(req, res) {
     }
 }
 
-// Mengambil data untuk Dashboard (Attention Logic)
 async function getAttentionDashboard(req, res) {
     try {
         const [rows] = await db.query(
-            `SELECT 
-                id, judul, severity_level, status, created_at 
+            `SELECT id, judul, deskripsi, severity_level, status, created_at 
              FROM incident_logs 
+             WHERE is_deleted = 0
              ORDER BY 
                  CASE 
                      WHEN severity_level = 'CRITICAL' THEN 1 
@@ -47,7 +46,31 @@ async function getAttentionDashboard(req, res) {
     }
 }
 
+async function softDeleteIncident(req, res) {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    try {
+        // Soft Delete
+        await db.query(
+            `UPDATE incident_logs SET is_deleted = 1 WHERE id = ?`,
+            [id]
+        );
+
+        await db.query(
+            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
+             VALUES (?, ?, ?, ?)`,
+            [id, user_id || 2, 'SOFT_DELETED', JSON.stringify({ message: `Incident ID ${id} soft deleted.` })]
+        );
+
+        res.json({ message: 'Incident soft deleted successfully and logged to audit trail.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 module.exports = {
     createIncident,
-    getAttentionDashboard
+    getAttentionDashboard,
+    softDeleteIncident
 };
