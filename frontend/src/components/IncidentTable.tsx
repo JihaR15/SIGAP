@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DetailModal } from "./DetailModal";
 import { DeleteModal } from "./DeleteModal";
@@ -37,17 +37,20 @@ export function IncidentTable({
   deletedData,
   auditData,
   currentUser,
+  viewMode = "active",
 }: {
   activeData: Incident[];
   deletedData: Incident[];
   auditData: AuditTrail[];
   currentUser: UserSession;
+  viewMode?: "active" | "audit";
 }) {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"ACTIVE" | "DELETED" | "AUDIT">(
-    "ACTIVE",
+    viewMode === "audit" ? "AUDIT" : "ACTIVE",
   );
+
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
     null,
   );
@@ -67,7 +70,16 @@ export function IncidentTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const itemsPerPage = 10;
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (viewMode === "audit") {
+      setActiveTab("AUDIT");
+    } else {
+      setActiveTab("ACTIVE");
+    }
+    setCurrentPage(1);
+  }, [viewMode]);
+
+  useEffect(() => {
     if (!isLive) return;
     const interval = setInterval(() => {
       router.refresh();
@@ -75,7 +87,7 @@ export function IncidentTable({
     return () => clearInterval(interval);
   }, [isLive, router]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
     if (activeTab === "ACTIVE") {
       setSortColumn("severity_level");
@@ -110,7 +122,10 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${incidentToDelete}`,
         {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" , "Authorization": `Bearer ${currentUser.token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${currentUser.token}`,
+          },
           body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
@@ -132,7 +147,10 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/resolve`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${currentUser.token}`,
+          },
           body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
@@ -154,7 +172,10 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/acknowledge`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${currentUser.token}`,
+          },
           body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
@@ -174,7 +195,10 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${incidentToRestore}/restore`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${currentUser.token}`,
+          },
           body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
@@ -216,7 +240,7 @@ export function IncidentTable({
     switch (status) {
       case "OPEN":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-full border border-gray-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-[11px] font-bold rounded-full border border-slate-200">
             <span className="material-symbols-outlined text-[14px]">
               radio_button_unchecked
             </span>
@@ -428,16 +452,25 @@ export function IncidentTable({
 
   return (
     <>
-      <TableTabs
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        deletedCount={deletedData.length}
-        auditCount={auditData.length}
-        role={currentUser.role}
-      />
-      <div className="bg-white border-x border-b border-gray-200 rounded-b-xl shadow-sm overflow-hidden flex flex-col">
+      {viewMode === "audit" && (
+        <TableTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          deletedCount={deletedData.length}
+          auditCount={auditData.length}
+          role={currentUser.role}
+        />
+      )}
+
+      <div
+        className={`bg-white shadow-sm overflow-hidden flex flex-col ${
+          viewMode === "active"
+            ? "border border-slate-200 rounded-xl"
+            : "border-x border-b border-slate-200 rounded-b-xl"
+        }`}
+      >
         {activeTab === "ACTIVE" ? (
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50/50">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50/50">
             <TableFilters
               filterDate={filterDate}
               setFilterDate={setFilterDate}

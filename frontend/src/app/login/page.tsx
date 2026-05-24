@@ -41,7 +41,7 @@ export default function LoginPage() {
             className="material-symbols-outlined text-blue-700 text-3xl" 
             style={{ fontVariationSettings: "'FILL' 1" }}
           >
-            shield_with_heart
+            security
           </span>
           <span className="text-xl font-bold text-blue-700 tracking-tight">SIGAP</span>
         </div>
