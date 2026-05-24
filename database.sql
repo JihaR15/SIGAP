@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 23, 2026 at 11:34 PM
+-- Generation Time: May 24, 2026 at 06:41 AM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.2.31
 
@@ -173,7 +173,16 @@ INSERT INTO `audit_trails` (`id`, `incident_id`, `user_id`, `aksi`, `data_sebelu
 (129, 53, 1, 'CREATED', NULL, '{\"message\": \"Melaporkan insiden \\\"warning\\\" (WARNING) — oleh Operator A (Operator).\"}', '2026-05-23 22:22:08'),
 (130, 54, 1, 'CREATED', NULL, '{\"message\": \"Melaporkan insiden \\\"parah\\\" (CRITICAL) — oleh Operator A (Operator).\"}', '2026-05-23 22:25:25'),
 (131, 54, 2, 'ACKNOWLEDGED', NULL, '{\"message\": \"Status diubah ke INVESTIGATING oleh Ops Manager\"}', '2026-05-23 22:25:47'),
-(132, 52, 2, 'RESOLVED', NULL, '{\"message\": \"Insiden dinyatakan selesai (RESOLVED).\"}', '2026-05-23 22:26:25');
+(132, 52, 2, 'RESOLVED', NULL, '{\"message\": \"Insiden dinyatakan selesai (RESOLVED).\"}', '2026-05-23 22:26:25'),
+(133, 55, NULL, 'CREATED', NULL, '{\"message\": \"Melaporkan insiden \\\"Suhu Mesin B Turun\\\" (INFO) — oleh User ID undefined.\"}', '2026-05-24 05:50:10'),
+(134, 60, 2, 'CREATED', NULL, '{\"message\": \"Melaporkan insiden \\\"Suhu Mesin W Naik drastis\\\" (CRITICAL) — oleh Staf Lapangan (Operator).\"}', '2026-05-24 06:12:44'),
+(135, 48, 1, 'RESTORED', NULL, '{\"message\": \"Insiden dikembalikan dari kotak sampah ke log aktif.\"}', '2026-05-24 06:19:33'),
+(136, 48, 1, 'ACKNOWLEDGED', NULL, '{\"message\": \"Status diubah ke INVESTIGATING oleh Ops Manager\"}', '2026-05-24 06:19:42'),
+(137, 48, 1, 'SOFT_DELETED', NULL, '{\"message\": \"Incident ID 48 soft deleted.\"}', '2026-05-24 06:19:50'),
+(138, 51, 1, 'RESOLVED', NULL, '{\"message\": \"Insiden dinyatakan selesai (RESOLVED).\"}', '2026-05-24 06:19:57'),
+(139, 60, 1, 'ACKNOWLEDGED', NULL, '{\"message\": \"Status diubah ke INVESTIGATING oleh Ops Manager\"}', '2026-05-24 06:20:05'),
+(140, 60, 1, 'RESOLVED', NULL, '{\"message\": \"Insiden dinyatakan selesai (RESOLVED).\"}', '2026-05-24 06:20:15'),
+(141, 61, 2, 'CREATED', NULL, '{\"message\": \"Melaporkan insiden \\\"Alert Server\\\" (CRITICAL) — oleh Staf Lapangan (Operator).\"}', '2026-05-24 06:21:18');
 
 -- --------------------------------------------------------
 
@@ -244,13 +253,16 @@ INSERT INTO `incident_logs` (`id`, `judul`, `deskripsi`, `severity_level`, `stat
 (45, 'Sinkronisasi Database Sukses', 'Backup data harian ke cloud selesai dalam 12 detik.', 'INFO', 'OPEN', NULL, '2026-05-23 13:09:18', 0),
 (46, 'Tegangan Listrik Fluktuatif', 'Terjadi penurunan tegangan sesaat di panel utama gedung produksi.', 'WARNING', 'OPEN', NULL, '2026-05-23 13:09:23', 1),
 (47, 'Tegangan Listrik Fluktuatif', 'Terjadi penurunan tegangan sesaat di panel utama gedung produksi.', 'WARNING', 'INVESTIGATING', NULL, '2026-05-23 13:09:28', 0),
-(48, 'critical', 'critical 2', 'CRITICAL', 'OPEN', 1, '2026-05-23 13:50:35', 1),
+(48, 'critical', 'critical 2', 'CRITICAL', 'INVESTIGATING', 1, '2026-05-23 13:50:35', 1),
 (49, 'critical', 'critical 3', 'CRITICAL', 'RESOLVED', 1, '2026-05-23 13:50:50', 0),
 (50, 'critical 2', 'critical 22', 'CRITICAL', 'RESOLVED', 1, '2026-05-23 13:51:13', 0),
-(51, 'critical', 'critical', 'CRITICAL', 'INVESTIGATING', 2, '2026-05-23 22:03:49', 0),
+(51, 'critical', 'critical', 'CRITICAL', 'RESOLVED', 2, '2026-05-23 22:03:49', 0),
 (52, 'critical 2', 'critical2', 'CRITICAL', 'RESOLVED', 2, '2026-05-23 22:04:15', 0),
 (53, 'warning', 'warning', 'WARNING', 'OPEN', 1, '2026-05-23 22:22:08', 0),
-(54, 'parah', 'parah', 'CRITICAL', 'INVESTIGATING', 1, '2026-05-23 22:25:24', 0);
+(54, 'parah', 'parah', 'CRITICAL', 'INVESTIGATING', 1, '2026-05-23 22:25:24', 0),
+(55, 'Suhu Mesin B Turun', 'aman', 'INFO', 'OPEN', NULL, '2026-05-24 05:50:10', 0),
+(60, 'Suhu Mesin W Naik drastis', 'Perlu Perbaikan', 'CRITICAL', 'RESOLVED', 2, '2026-05-24 06:12:44', 0),
+(61, 'Alert Server', 'Ruangan Server mengalami kebocoran', 'CRITICAL', 'OPEN', 2, '2026-05-24 06:21:18', 0);
 
 -- --------------------------------------------------------
 
@@ -261,6 +273,8 @@ INSERT INTO `incident_logs` (`id`, `judul`, `deskripsi`, `severity_level`, `stat
 CREATE TABLE `users` (
   `id` int NOT NULL,
   `nama` varchar(100) NOT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
   `role` enum('Operator','Manager','System') DEFAULT 'Operator',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -269,10 +283,9 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `nama`, `role`, `created_at`) VALUES
-(1, 'Operator A', 'Operator', '2026-05-21 20:05:47'),
-(2, 'Manager Ops', 'Manager', '2026-05-21 20:05:47'),
-(99, 'IoT Sensor System', 'System', '2026-05-23 07:15:17');
+INSERT INTO `users` (`id`, `nama`, `username`, `password`, `role`, `created_at`) VALUES
+(1, 'Manager Satu', 'manager_utama', '$2b$10$4ZOZnP7oymUTCFi0G2GqjeDuZqR3uYJYDa8XNyeu7pn84NRCSfV0S', 'Manager', '2026-05-24 04:36:29'),
+(2, 'Staf Lapangan', 'operator01', '$2b$10$4ZOZnP7oymUTCFi0G2GqjeDuZqR3uYJYDa8XNyeu7pn84NRCSfV0S', 'Operator', '2026-05-24 04:36:29');
 
 --
 -- Indexes for dumped tables
@@ -297,7 +310,8 @@ ALTER TABLE `incident_logs`
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -307,19 +321,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `audit_trails`
 --
 ALTER TABLE `audit_trails`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=133;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=142;
 
 --
 -- AUTO_INCREMENT for table `incident_logs`
 --
 ALTER TABLE `incident_logs`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables
