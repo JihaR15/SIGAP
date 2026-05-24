@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserSession } from "./Login";
+import { UserSession } from "./DashboardView";
 
 export function IncidentForm({
   isOpen,
@@ -28,7 +28,7 @@ export function IncidentForm({
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/incidents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
         body: JSON.stringify({
           judul,
           deskripsi,

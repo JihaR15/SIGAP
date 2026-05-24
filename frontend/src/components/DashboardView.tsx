@@ -1,60 +1,40 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Login, UserSession } from "@/components/Login";
 import { CriticalBanner } from "@/components/CriticalBanner";
 import { IncidentTable } from "@/components/IncidentTable";
 import { NewIncidentAction } from "@/components/NewIncidentAction";
 import { DashboardMetrics } from "@/components/DashboardMetrics";
+import { signOut } from "next-auth/react";
+
+export interface UserSession {
+  id: number | string;
+  nama: string;
+  role: "Manager" | "Operator";
+  token?: string;
+}
 
 interface DashboardViewProps {
   incidents: any[];
   deletedIncidents: any[];
   auditTrails: any[];
+  currentUser: UserSession;
 }
 
 export function DashboardView({
   incidents,
   deletedIncidents,
   auditTrails,
+  currentUser,
 }: DashboardViewProps) {
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  useEffect(() => {
-    const savedSession = localStorage.getItem("greenfields_session");
-    if (savedSession) {
-      try {
-        setCurrentUser(JSON.parse(savedSession));
-      } catch (e) {
-        console.error("Gagal membaca sesi", e);
-      }
-    }
-    setIsLoaded(true);
-  }, []);
-
-  const handleLogin = (user: UserSession) => {
-    localStorage.setItem("greenfields_session", JSON.stringify(user));
-    setCurrentUser(user);
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem("greenfields_session");
-    setCurrentUser(null);
-  };
-
-  if (!isLoaded) {
-    return <div className="min-h-screen bg-gray-50"></div>;
-  }
-
-  if (!currentUser) {
-    return <Login onLogin={handleLogin} />;
-  }
 
   const allowedIncidents = incidents.filter((log: any) => {
     if (
       currentUser.role === "Operator" &&
-      Number(log.reporter_id) !== currentUser.id
+      Number(log.reporter_id) !== Number(currentUser.id)
     ) {
       return false;
     }
@@ -64,7 +44,6 @@ export function DashboardView({
   const criticalLogs = allowedIncidents.filter(
     (log: any) => log.severity_level === "CRITICAL" && log.status === "OPEN",
   );
-  //   const tableLogs = incidents;
 
   return (
     <main className="min-h-screen bg-gray-50" suppressHydrationWarning>

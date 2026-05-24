@@ -8,7 +8,7 @@ import { RestoreModal } from "./RestoreModal";
 import { TableTabs } from "./TableTabs";
 import { TableFilters } from "./TableFilters";
 import { PaginationControls } from "./PaginationControls";
-import { UserSession } from "./Login";
+import { UserSession } from "./DashboardView";
 import * as XLSX from "xlsx";
 
 interface Incident {
@@ -110,8 +110,8 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${incidentToDelete}`,
         {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
+          headers: { "Content-Type": "application/json" , "Authorization": `Bearer ${currentUser.token}` },
+          body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
       if (res.ok) {
@@ -132,8 +132,8 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/resolve`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
+          body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
       if (res.ok) {
@@ -154,8 +154,8 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/acknowledge`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
+          body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
       if (res.ok) router.refresh();
@@ -174,8 +174,8 @@ export function IncidentTable({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${incidentToRestore}/restore`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: 2 }),
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
+          body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
       if (res.ok) {

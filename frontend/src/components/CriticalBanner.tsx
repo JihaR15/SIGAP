@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserSession } from "./Login";
+import { UserSession } from "./DashboardView";
 
 interface Incident {
   id: number;
@@ -37,7 +37,7 @@ export function CriticalBanner({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/acknowledge`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
           body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
@@ -61,7 +61,7 @@ export function CriticalBanner({
         `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/acknowledge`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${currentUser.token}` },
           body: JSON.stringify({ user_id: currentUser.id }),
         },
       );
