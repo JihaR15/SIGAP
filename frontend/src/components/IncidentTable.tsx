@@ -107,7 +107,7 @@ export function IncidentTable({
     setIsProcessing(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/api/incidents/${incidentToDelete}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/incidents/${incidentToDelete}`,
         {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
@@ -129,7 +129,7 @@ export function IncidentTable({
     setIsProcessing(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/api/incidents/${id}/resolve`,
+        `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/resolve`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -151,7 +151,7 @@ export function IncidentTable({
     setIsProcessing(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/api/incidents/${id}/acknowledge`,
+        `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/acknowledge`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -171,7 +171,7 @@ export function IncidentTable({
     setIsProcessing(true);
     try {
       const res = await fetch(
-        `http://localhost:3000/api/incidents/${incidentToRestore}/restore`,
+        `${process.env.NEXT_PUBLIC_API_URL}/incidents/${incidentToRestore}/restore`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -368,23 +368,30 @@ export function IncidentTable({
       exportData = sortedData.map((log: any) => ({
         "ID Insiden": log.id,
         "Waktu Laporan": new Date(log.created_at).toLocaleString("id-ID"),
-        "Judul": log.judul,
-        "Status": log.status,
+        Judul: log.judul,
+        Status: log.status,
         "Tingkat Urgensi": log.severity_level,
         "Deskripsi Masalah": log.deskripsi,
       }));
 
       columnWidths = [
-        { wch: 10 }, { wch: 20 }, { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 50 },
+        { wch: 10 },
+        { wch: 20 },
+        { wch: 35 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 50 },
       ];
       sheetName = activeTab === "ACTIVE" ? "Log Aktif" : "Log Terhapus";
       fileName = `Laporan_Insiden_${activeTab}_${new Date().getTime()}.xlsx`;
-    } 
-    else if (activeTab === "AUDIT") {
+    } else if (activeTab === "AUDIT") {
       exportData = sortedData.map((trail: any) => {
         let detailMessage = "";
         try {
-          const parsed = typeof trail.data_baru === "string" ? JSON.parse(trail.data_baru) : trail.data_baru;
+          const parsed =
+            typeof trail.data_baru === "string"
+              ? JSON.parse(trail.data_baru)
+              : trail.data_baru;
           detailMessage = parsed?.message || JSON.stringify(parsed);
         } catch (e) {
           detailMessage = trail.data_baru;
@@ -400,7 +407,11 @@ export function IncidentTable({
       });
 
       columnWidths = [
-        { wch: 10 }, { wch: 20 }, { wch: 40 }, { wch: 20 }, { wch: 60 },
+        { wch: 10 },
+        { wch: 20 },
+        { wch: 40 },
+        { wch: 20 },
+        { wch: 60 },
       ];
       sheetName = "Catatan Audit";
       fileName = `Laporan_Audit_Sistem_${new Date().getTime()}.xlsx`;

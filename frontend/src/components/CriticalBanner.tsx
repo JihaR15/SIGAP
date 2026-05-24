@@ -34,7 +34,7 @@ export function CriticalBanner({
     setProcessingTarget("ALL");
     try {
       const res = await fetch(
-        "http://localhost:3000/api/incidents/acknowledge",
+        `${process.env.NEXT_PUBLIC_API_URL}/incidents/acknowledge`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -58,7 +58,7 @@ export function CriticalBanner({
     setProcessingTarget(id);
     try {
       const res = await fetch(
-        `http://localhost:3000/api/incidents/${id}/acknowledge`,
+        `${process.env.NEXT_PUBLIC_API_URL}/incidents/${id}/acknowledge`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

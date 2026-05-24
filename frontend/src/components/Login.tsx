@@ -19,7 +19,7 @@ export function Login({ onLogin }: LoginProps) {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/users");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`);
         if (res.ok) {
           const data = await res.json();
           setUsers(data);
@@ -89,7 +89,9 @@ export function Login({ onLogin }: LoginProps) {
                     {operator?.nama || "Tidak ada data"}
                   </p>
                   <p className="text-sm text-gray-500 mb-8 grow leading-relaxed">
-                    Catat laporan insiden secara real-time dan pantau status penanganan gangguan infrastruktur yang Anda temukan di lapangan.
+                    Catat laporan insiden secara real-time dan pantau status
+                    penanganan gangguan infrastruktur yang Anda temukan di
+                    lapangan.
                   </p>
                   <div className="flex items-center text-blue-700 text-xs font-bold tracking-widest gap-2">
                     <span>ACCESS DASHBOARD</span>
@@ -118,7 +120,8 @@ export function Login({ onLogin }: LoginProps) {
                     {manager?.nama || "Tidak ada data"}
                   </p>
                   <p className="text-sm text-gray-500 mb-8 grow leading-relaxed">
-                    Lihat kondisi infrastruktur, tanggapi peringatan penting, dan kelola penyelesaian insiden serta riwayat audit.
+                    Lihat kondisi infrastruktur, tanggapi peringatan penting,
+                    dan kelola penyelesaian insiden serta riwayat audit.
                   </p>
                   <div className="flex items-center text-indigo-700 text-xs font-bold tracking-widest gap-2">
                     <span>ADMINISTRATIVE PORTAL</span>

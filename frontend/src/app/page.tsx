@@ -2,7 +2,7 @@ import { DashboardView } from "@/components/DashboardView";
 
 async function fetchFromBackend(endpoint: string) {
   try {
-    const res = await fetch(`http://localhost:3000/api/${endpoint}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/${endpoint}`, {
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`Gagal memuat ${endpoint}`);
@@ -21,10 +21,10 @@ export default async function Dashboard() {
   ]);
 
   return (
-    <DashboardView 
-      incidents={incidents} 
-      deletedIncidents={deletedIncidents} 
-      auditTrails={auditTrails} 
+    <DashboardView
+      incidents={incidents}
+      deletedIncidents={deletedIncidents}
+      auditTrails={auditTrails}
     />
   );
 }
