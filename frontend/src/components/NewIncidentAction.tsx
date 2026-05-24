@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IncidentForm } from './IncidentForm';
-import { UserSession } from './Login';
+import { UserSession } from './DashboardView';
 
 export function NewIncidentAction({ currentUser }: { currentUser: UserSession }) {
   const [isModalOpen, setIsModalOpen] = useState(false);

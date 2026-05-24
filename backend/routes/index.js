@@ -1,18 +1,24 @@
 const express = require('express');
 const router = express.Router();
+
 const incidentController = require('../controllers/incident');
 const userController = require('../controllers/user');
+const authController = require('../controllers/auth');
 
-router.post('/incidents', incidentController.createIncident);
-router.get('/incidents', incidentController.getAttentionDashboard);
-router.delete('/incidents/:id', incidentController.softDeleteIncident);
-router.put('/incidents/:id/acknowledge', incidentController.acknowledgeSingle);
-router.put('/incidents/acknowledge', incidentController.acknowledgeAllCritical);
-router.put('/incidents/:id/resolve', incidentController.resolveIncident);
-router.get('/incidents/archived/deleted', incidentController.getDeletedIncidents);
-router.get('/audit-trails', incidentController.getAuditTrails);
-router.put('/incidents/:id/restore', incidentController.restoreIncident);
+const { verifyToken, isManager } = require('../middleware/auth');
 
-router.get('/users', userController.getAllUsers);
+router.post('/auth/login', authController.login);
+
+router.post('/incidents', verifyToken, incidentController.createIncident);
+router.get('/incidents', verifyToken, incidentController.getAttentionDashboard);
+router.get('/users', verifyToken, userController.getAllUsers);
+
+router.delete('/incidents/:id', verifyToken, isManager, incidentController.softDeleteIncident);
+router.put('/incidents/:id/acknowledge', verifyToken, isManager, incidentController.acknowledgeSingle);
+router.put('/incidents/acknowledge', verifyToken, isManager, incidentController.acknowledgeAllCritical);
+router.put('/incidents/:id/resolve', verifyToken, isManager, incidentController.resolveIncident);
+router.get('/incidents/archived/deleted', verifyToken, isManager, incidentController.getDeletedIncidents);
+router.get('/audit-trails', verifyToken, isManager, incidentController.getAuditTrails);
+router.put('/incidents/:id/restore', verifyToken, isManager, incidentController.restoreIncident);
 
 module.exports = router;

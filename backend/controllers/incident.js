@@ -30,6 +30,7 @@ async function createIncident(req, res) {
 
         res.status(201).json({ message: 'Incident logged successfully', id: newIncidentId });
     } catch (error) {
+        console.error("GAGAL SIMPAN INSIDEN:", error);
         res.status(500).json({ error: error.message });
     }
 }

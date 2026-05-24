@@ -1,10 +1,11 @@
+require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 const dbConfig = {
-    host: 'localhost',
-    user: 'admin_web',
-    password: '101104',
-    database: 'greenfields_mvp'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'greenfields_mvp'
 };
 
 const scenarios = {
@@ -16,7 +17,7 @@ const scenarios = {
     WARNING: [
         { judul: "Getaran Mesin B Melebihi Batas", deskripsi: "Sensor mendeteksi getaran 15% di atas batas normal. Perlu pelumasan." },
         { judul: "Kapasitas RAM Server Hampir Penuh", deskripsi: "Penggunaan memori mencapai 88%. Menunggu auto-scaling aktif." },
-        { judul: "Tegangan Listrik Fluktuatif", deskripsi: "Terjadi penurunan tegangan sesaat di panel utama gedung produksi." }
+        { judul: "Tegangan Listrik Fluktuatif", deskripsi: "Terjadi penurunan penurunan tegangan sesaat di panel utama gedung produksi." }
     ],
     CRITICAL: [
         { judul: "🚨 Kebocoran Pipa Valve Utama", deskripsi: "Tekanan air menurun drastis! Terindikasi kebocoran parah pada ring valve C." },
@@ -43,8 +44,8 @@ async function runSimulator() {
             const selected = scenarioList[Math.floor(Math.random() * scenarioList.length)];
 
             const [logResult] = await connection.execute(
-                `INSERT INTO incident_logs (judul, deskripsi, severity_level, status) VALUES (?, ?, ?, ?)`,
-                [selected.judul, selected.deskripsi, level, 'OPEN']
+                `INSERT INTO incident_logs (judul, deskripsi, severity_level, status, reporter_id) VALUES (?, ?, ?, ?, ?)`,
+                [selected.judul, selected.deskripsi, level, 'OPEN', 99]
             );
 
             await connection.execute(
