@@ -7,7 +7,7 @@ const authController = require('../controllers/auth');
 
 const { verifyToken, isManager } = require('../middleware/auth');
 
-router.post('/auth/login', authController.login);
+router.post('/login', authController.login);
 
 router.post('/incidents', verifyToken, incidentController.createIncident);
 router.get('/incidents', verifyToken, incidentController.getAttentionDashboard);

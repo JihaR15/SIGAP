@@ -117,24 +117,23 @@ Aplikasi berjalan di `http://localhost:3000`.
 ```bash
 cd /var/www/sigap-app/backend
 npm install
-pm2 start index.js --name "sigap-backend"
+
+pm2 start server.js --name "sigap-backend"
 ```
 
-### Frontend (Standalone Mode)
+---
+
+### Frontend (Next.js Production)
 
 ```bash
 cd /var/www/sigap-app/frontend
 npm install
 npm run build
 
-# Salin aset statis
-cp -r public .next/standalone/
-cp -r .next/static .next/standalone/.next/
-
-# Jalankan dengan PM2
-cd .next/standalone
-PORT=3000 pm2 start server.js --name "sigap-frontend"
+pm2 start npm --name "sigap-frontend" -- start
 ```
+
+---
 
 ### Simpan Konfigurasi PM2
 
@@ -143,38 +142,133 @@ pm2 save
 pm2 startup
 ```
 
-### Konfigurasi Nginx
+---
+
+## 🌐 Konfigurasi Nginx (Reverse Proxy)
+
+File:
+
+```bash
+/etc/nginx/sites-available/sigap
+```
+
+Konfigurasi:
 
 ```nginx
 server {
     listen 80;
     server_name sigap.duckdns.org;
 
-    location /api/ {
-        proxy_pass http://localhost:3001/api/;
+    # NextAuth Route (Frontend - Next.js)
+    location /api/auth/ {
+        proxy_pass http://localhost:3000/api/auth/;
+
         proxy_http_version 1.1;
+
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
+
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    location / {
-        proxy_pass http://localhost:3000;
+    # Backend API Route (Express.js)
+    location /api/ {
+        proxy_pass http://localhost:3001/api/;
+
         proxy_http_version 1.1;
+
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
+
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend Next.js
+    location / {
+        proxy_pass http://localhost:3000;
+
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
+---
+
+### Enable Site
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/sigap /etc/nginx/sites-enabled/
+```
+
+---
+
+### Test Konfigurasi Nginx
+
+```bash
+sudo nginx -t
+```
+
+---
+
+### Restart Nginx
+
+```bash
 sudo systemctl restart nginx
 ```
 
+---
+
+## ⚠️ Catatan Penting Deployment
+
+SIGAP menggunakan NextAuth untuk autentikasi frontend.  
+Karena route `/api/auth/*` sudah digunakan oleh NextAuth, endpoint backend login dipindahkan dari:
+
+```txt
+/api/auth/login
+```
+
+menjadi:
+
+```txt
+/api/login
+```
+
+Perubahan ini diperlukan untuk menghindari konflik route antara:
+- Next.js / NextAuth
+- Express.js Backend
+- Nginx Reverse Proxy
+
+---
+
+## 🔐 Environment Frontend Production
+
+File:
+
+```bash
+frontend/.env.local
+```
+
+Isi:
+
+```env
+NEXT_PUBLIC_API_URL=http://sigap.duckdns.org/api
+NEXTAUTH_URL=http://sigap.duckdns.org
+NEXTAUTH_SECRET=your_secret_key
+```
 ---
 
 ## 📈 Spesifikasi Infrastruktur
@@ -192,18 +286,21 @@ Aplikasi dioptimalkan untuk berjalan stabil pada spesifikasi minimal, bahkan di 
 
 ## 📁 Struktur Proyek
 
-
 ```
 ├── backend
 │   ├── config
 │   │   └── db.js
 │   ├── controllers
+│   │   ├── auth.js
 │   │   ├── incident.js
 │   │   └── user.js
+│   ├── middleware
+│   │   └── auth.js
 │   ├── routes
 │   │   └── index.js
 │   ├── package-lock.json
 │   ├── package.json
+│   ├── seed.js
 │   ├── server.js
 │   └── simulator.js
 ├── frontend
@@ -215,6 +312,12 @@ Aplikasi dioptimalkan untuk berjalan stabil pada spesifikasi minimal, bahkan di 
 │   │   └── window.svg
 │   ├── src
 │   │   ├── app
+│   │   │   ├── api
+│   │   │   │   └── auth
+│   │   │   │       └── [...nextauth]
+│   │   │   │           └── route.ts
+│   │   │   ├── login
+│   │   │   │   └── page.tsx
 │   │   │   ├── favicon.ico
 │   │   │   ├── globals.css
 │   │   │   ├── layout.tsx
@@ -227,14 +330,16 @@ Aplikasi dioptimalkan untuk berjalan stabil pada spesifikasi minimal, bahkan di 
 │   │   │   ├── DetailModal.tsx
 │   │   │   ├── IncidentForm.tsx
 │   │   │   ├── IncidentTable.tsx
-│   │   │   ├── Login.tsx
 │   │   │   ├── NewIncidentAction.tsx
 │   │   │   ├── PaginationControls.tsx
 │   │   │   ├── RestoreModal.tsx
+│   │   │   ├── Sidebar.tsx
 │   │   │   ├── TableFilters.tsx
 │   │   │   └── TableTabs.tsx
-│   │   └── lib
-│   │       └── api.ts
+│   │   ├── lib
+│   │   │   └── api.ts
+│   │   ├── middleware.ts
+│   │   └── next-auth.d.ts
 │   ├── .gitignore
 │   ├── README.md
 │   ├── eslint.config.mjs
