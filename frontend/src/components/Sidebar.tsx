@@ -7,6 +7,7 @@ interface SidebarProps {
   setIsMobileMenuOpen: (isOpen: boolean) => void;
   currentUser: UserSession;
   onLogout: () => void;
+  onOpenProfile: () => void;
 }
 
 export function Sidebar({
@@ -16,6 +17,7 @@ export function Sidebar({
   setIsMobileMenuOpen,
   currentUser,
   onLogout,
+  onOpenProfile,
 }: SidebarProps) {
   const menuItems = [
     { id: "overview", label: "Dashboard Metrics", icon: "dashboard" },
@@ -151,7 +153,7 @@ export function Sidebar({
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                setActiveMenu("profile");
+                onOpenProfile();
                 setIsMobileMenuOpen(false);
               }}
               className="group flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 
