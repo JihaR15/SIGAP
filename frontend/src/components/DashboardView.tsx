@@ -7,6 +7,7 @@ import { IncidentTable } from "@/components/IncidentTable";
 import { NewIncidentAction } from "@/components/NewIncidentAction";
 import { DashboardMetrics } from "@/components/DashboardMetrics";
 import { Sidebar } from "@/components/Sidebar";
+import UserManagementView from "@/components/UserManagementView";
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend, LineChart, Line
@@ -327,6 +328,12 @@ export function DashboardView({
                 currentUser={currentUser} 
                 viewMode="audit"
               />
+            </div>
+          )}
+
+          {activeMenu === "users" && currentUser.role === "Manager" && (
+            <div className="space-y-6 animate-fade-in">
+              <UserManagementView currentUser={currentUser} />
             </div>
           )}
 

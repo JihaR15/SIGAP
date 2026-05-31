@@ -1,5 +1,22 @@
 const db = require('../config/db');
 
+async function recordAudit(incidentId, userId, aksi, dataSebelumnya = null, dataBaru = null) {
+    try {
+        await db.query(
+            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_sebelumnya, data_baru) VALUES (?, ?, ?, ?, ?)`,
+            [
+                incidentId, 
+                userId, 
+                aksi, 
+                dataSebelumnya ? JSON.stringify(dataSebelumnya) : null, 
+                dataBaru ? JSON.stringify(dataBaru) : null
+            ]
+        );
+    } catch (error) {
+        console.error("Gagal mencatat log audit insiden:", error.message);
+    }
+}
+
 async function createIncident(req, res) {
     const { judul, deskripsi, severity_level, reporter_id } = req.body;
     
@@ -19,13 +36,14 @@ async function createIncident(req, res) {
         );
         
         const newIncidentId = result.insertId;
-
         const logMessage = `Melaporkan insiden "${judul}" (${severity_level}) — oleh ${reporterName}.`;
 
-        await db.query(
-            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
-             VALUES (?, ?, ?, ?)`,
-            [newIncidentId, reporter_id, 'CREATED', JSON.stringify({ message: logMessage })]
+        await recordAudit(
+            newIncidentId, 
+            reporter_id, 
+            'CREATED', 
+            null, 
+            { message: logMessage, detail: { judul, severity_level } }
         );
 
         res.status(201).json({ message: 'Incident logged successfully', id: newIncidentId });
@@ -38,9 +56,10 @@ async function createIncident(req, res) {
 async function getAttentionDashboard(req, res) {
     try {
         const [rows] = await db.query(
-            `SELECT id, judul, deskripsi, severity_level, status, created_at, reporter_id 
+            `SELECT incident_logs.id, incident_logs.judul, incident_logs.deskripsi, incident_logs.severity_level, incident_logs.status, incident_logs.created_at, incident_logs.reporter_id, users.nama AS reporter_name
              FROM incident_logs 
-             WHERE is_deleted = 0
+             LEFT JOIN users ON incident_logs.reporter_id = users.id
+             WHERE incident_logs.is_deleted = 0
              ORDER BY 
                  CASE 
                      WHEN severity_level = 'CRITICAL' THEN 1 
@@ -59,19 +78,20 @@ async function getAttentionDashboard(req, res) {
 
 async function softDeleteIncident(req, res) {
     const { id } = req.params;
-    const { user_id } = req.body;
+    const user_id = req.body.user_id || (req.user ? req.user.id : null);
 
     try {
-        // Soft Delete
-        await db.query(
-            `UPDATE incident_logs SET is_deleted = 1 WHERE id = ?`,
-            [id]
-        );
+        const [prev] = await db.query(`SELECT status, is_deleted FROM incident_logs WHERE id = ?`, [id]);
+        const dataSebelumnya = prev.length ? prev[0] : null;
 
-        await db.query(
-            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
-             VALUES (?, ?, ?, ?)`,
-            [id, user_id || 2, 'SOFT_DELETED', JSON.stringify({ message: `Incident ID ${id} soft deleted.` })]
+        await db.query(`UPDATE incident_logs SET is_deleted = 1 WHERE id = ?`, [id]);
+
+        await recordAudit(
+            id, 
+            user_id, 
+            'SOFT_DELETED', 
+            dataSebelumnya, 
+            { message: `Incident ID ${id} dipindah ke tempat sampah.`, is_deleted: 1 }
         );
 
         res.json({ message: 'Incident soft deleted successfully and logged to audit trail.' });
@@ -82,14 +102,20 @@ async function softDeleteIncident(req, res) {
 
 async function acknowledgeSingle(req, res) {
     const { id } = req.params;
-    const { user_id } = req.body;
+    const user_id = req.body.user_id || (req.user ? req.user.id : null);
 
     try {
+        const [prev] = await db.query(`SELECT status FROM incident_logs WHERE id = ?`, [id]);
+        const dataSebelumnya = prev.length ? prev[0] : null;
+
         await db.query(`UPDATE incident_logs SET status = 'INVESTIGATING' WHERE id = ?`, [id]);
         
-        await db.query(
-            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) VALUES (?, ?, ?, ?)`,
-            [id, user_id || 2, 'ACKNOWLEDGED', JSON.stringify({ message: 'Status diubah ke INVESTIGATING oleh Ops Manager' })]
+        await recordAudit(
+            id, 
+            user_id, 
+            'ACKNOWLEDGED', 
+            dataSebelumnya, 
+            { message: 'Status diubah ke INVESTIGATING', status: 'INVESTIGATING' }
         );
 
         res.json({ message: 'Incident Acknowledged.' });
@@ -99,11 +125,11 @@ async function acknowledgeSingle(req, res) {
 }
 
 async function acknowledgeAllCritical(req, res) {
-    const { user_id } = req.body; 
+    const user_id = req.body.user_id || (req.user ? req.user.id : null);
 
     try {
         const [rows] = await db.query(
-            `SELECT id FROM incident_logs 
+            `SELECT id, status FROM incident_logs 
              WHERE severity_level = 'CRITICAL' AND status = 'OPEN' AND is_deleted = 0`
         );
 
@@ -113,16 +139,15 @@ async function acknowledgeAllCritical(req, res) {
 
         const ids = rows.map(r => r.id);
 
-        await db.query(
-            `UPDATE incident_logs SET status = 'INVESTIGATING' WHERE id IN (?)`,
-            [ids]
-        );
+        await db.query(`UPDATE incident_logs SET status = 'INVESTIGATING' WHERE id IN (?)`, [ids]);
 
-        for (const id of ids) {
-            await db.query(
-                `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
-                 VALUES (?, ?, ?, ?)`,
-                [id, user_id || 2, 'ACKNOWLEDGED', JSON.stringify({ message: 'Status diubah ke INVESTIGATING oleh Ops Manager' })]
+        for (const row of rows) {
+            await recordAudit(
+                row.id, 
+                user_id, 
+                'ACKNOWLEDGED', 
+                { status: row.status }, 
+                { message: 'Acknowledge Massal: Status diubah ke INVESTIGATING', status: 'INVESTIGATING' }
             );
         }
 
@@ -134,14 +159,22 @@ async function acknowledgeAllCritical(req, res) {
 
 async function resolveIncident(req, res) {
     const { id } = req.params;
-    const { user_id } = req.body;
+    const user_id = req.body.user_id || (req.user ? req.user.id : null);
+
     try {
+        const [prev] = await db.query(`SELECT status FROM incident_logs WHERE id = ?`, [id]);
+        const dataSebelumnya = prev.length ? prev[0] : null;
+
         await db.query(`UPDATE incident_logs SET status = 'RESOLVED' WHERE id = ?`, [id]);
         
-        await db.query(
-            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) VALUES (?, ?, ?, ?)`,
-            [id, user_id || 2, 'RESOLVED', JSON.stringify({ message: 'Insiden dinyatakan selesai (RESOLVED).' })]
+        await recordAudit(
+            id, 
+            user_id, 
+            'RESOLVED', 
+            dataSebelumnya, 
+            { message: 'Insiden dinyatakan selesai.', status: 'RESOLVED' }
         );
+
         res.json({ message: 'Incident status updated to RESOLVED.' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -151,7 +184,11 @@ async function resolveIncident(req, res) {
 async function getDeletedIncidents(req, res) {
     try {
         const [rows] = await db.query(
-            `SELECT id, judul, deskripsi, severity_level, status, created_at FROM incident_logs WHERE is_deleted = 1 ORDER BY created_at DESC`
+            `SELECT incident_logs.*, users.nama AS reporter_name 
+             FROM incident_logs 
+             LEFT JOIN users ON incident_logs.reporter_id = users.id
+             WHERE incident_logs.is_deleted = 1 
+             ORDER BY incident_logs.created_at DESC`
         );
         res.json(rows);
     } catch (error) {
@@ -162,9 +199,10 @@ async function getDeletedIncidents(req, res) {
 async function getAuditTrails(req, res) {
     try {
         const [rows] = await db.query(
-            `SELECT a.id, a.aksi, a.data_baru, a.created_at, i.judul as incident_title 
+            `SELECT a.*, i.judul AS incident_title, u.nama AS actor_name 
              FROM audit_trails a
              LEFT JOIN incident_logs i ON a.incident_id = i.id
+             LEFT JOIN users u ON a.user_id = u.id
              ORDER BY a.created_at DESC`
         );
         res.json(rows);
@@ -175,15 +213,20 @@ async function getAuditTrails(req, res) {
 
 async function restoreIncident(req, res) {
     const { id } = req.params;
-    const { user_id } = req.body;
+    const user_id = req.body.user_id || (req.user ? req.user.id : null);
 
     try {
+        const [prev] = await db.query(`SELECT is_deleted FROM incident_logs WHERE id = ?`, [id]);
+        const dataSebelumnya = prev.length ? prev[0] : null;
+
         await db.query(`UPDATE incident_logs SET is_deleted = 0 WHERE id = ?`, [id]);
 
-        await db.query(
-            `INSERT INTO audit_trails (incident_id, user_id, aksi, data_baru) 
-             VALUES (?, ?, ?, ?)`,
-            [id, user_id || 2, 'RESTORED', JSON.stringify({ message: 'Insiden dikembalikan dari kotak sampah ke log aktif.' })]
+        await recordAudit(
+            id, 
+            user_id, 
+            'RESTORED', 
+            dataSebelumnya, 
+            { message: 'Insiden dikembalikan dari kotak sampah ke log aktif.', is_deleted: 0 }
         );
 
         res.json({ message: 'Incident restored successfully.' });
