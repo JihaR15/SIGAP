@@ -8,7 +8,7 @@ import { UserStats } from "./users/UserStats";
 import { UserTable } from "./users/UserTable";
 import { UserFormModal } from "./users/UserFormModal";
 import { UserDeleteModal } from "./users/UserDeleteModal";
-import { UserRestoreModal } from "./users/UserRestoreModal"; // Import modal baru
+import { UserRestoreModal } from "./users/UserRestoreModal";
 
 import * as XLSX from "xlsx";
 import { ImportExcelModal } from "./users/ImportExcelModal";
@@ -28,8 +28,8 @@ export default function UserManagementView({ currentUser }: UserManagementViewPr
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [userToRestore, setUserToRestore] = useState<number | null>(null); // State baru
-  const [isRestoring, setIsRestoring] = useState(false); // State baru
+  const [userToRestore, setUserToRestore] = useState<number | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
   
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [formData, setFormData] = useState({ id: 0, nama: "", username: "", role: "Operator", password: "" });
@@ -106,7 +106,6 @@ export default function UserManagementView({ currentUser }: UserManagementViewPr
     }
   };
 
-  // Fungsi baru untuk memulihkan pengguna
   const confirmRestore = async () => {
     if (!userToRestore) return;
     setIsRestoring(true);
@@ -229,7 +228,7 @@ export default function UserManagementView({ currentUser }: UserManagementViewPr
         currentUser={currentUser}
         onEdit={openEditModal}
         onDelete={(id) => setUserToDelete(id)}
-        onRestore={(id) => setUserToRestore(id)} // Lempar fungsi ke tabel
+        onRestore={(id) => setUserToRestore(id)}
       />
 
       <UserFormModal
@@ -254,7 +253,6 @@ export default function UserManagementView({ currentUser }: UserManagementViewPr
         isProcessing={isDeleting}
       />
 
-      {/* Modal Konfirmasi Pengaktifan Kembali */}
       <UserRestoreModal
         isOpen={!!userToRestore}
         onClose={() => setUserToRestore(null)}

@@ -133,7 +133,7 @@ export function DashboardView({
         (i) => i.created_at?.split("T")[0] === date,
       ).length,
       resolved: allowedIncidents.filter(
-        (i) => i.resolved_at?.split("T")[0] === date,
+        (i) => i.status === "RESOLVED" && i.created_at?.slice(0, 10) === date,
       ).length,
     }));
   };
@@ -514,9 +514,9 @@ export function DashboardView({
           )}
         </main>
       </div>
-      <ProfileModal 
-        isOpen={isProfileModalOpen} 
-        onClose={() => setIsProfileModalOpen(false)} 
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
         currentUser={currentUser}
         onLogout={handleLogout}
       />
