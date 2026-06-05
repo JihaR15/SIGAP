@@ -1,0 +1,50 @@
+name: Deploy SIGAP
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+
+          script: |
+            echo "=== DEPLOY START ==="
+
+            cd /var/www/sigap-app
+
+            git pull origin master
+
+            echo "=== INSTALL BACKEND ==="
+
+            cd backend
+            npm ci
+
+            echo "=== INSTALL FRONTEND ==="
+
+            cd ../frontend
+            npm ci
+
+            echo "=== BUILD FRONTEND ==="
+
+            npm run build
+
+            echo "=== RESTART PM2 ==="
+
+            pm2 restart sigap-backend
+            pm2 restart sigap-frontend
+
+            pm2 save
+
+            echo "=== DEPLOY SUCCESS ==="
