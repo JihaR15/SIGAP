@@ -27,7 +27,8 @@ export const authOptions: NextAuthOptions = {
               id: user.id?.toString() || "0",
               name: user.nama,
               role: user.role,
-              token: user.token, 
+              token: user.token,
+              username: user.username,
             };
           }
           throw new Error(user.message || "Username atau Password salah");
@@ -38,20 +39,23 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.accessToken = user.token; 
+        token.username = user.username;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       // Menyisipkan token ke dalam sesi
       session.accessToken = token.accessToken;
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.username = token.username as string;
+        session.user.nama = token.name as string;
       }
       return session;
     },
@@ -62,7 +66,6 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// Menggunakan authOptions yang sudah dipisah
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

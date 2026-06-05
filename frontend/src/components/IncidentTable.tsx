@@ -19,17 +19,27 @@ interface Incident {
   status: string;
   created_at: string;
   reporter_id: number;
+  reporter_name?: string;
 }
 
 interface AuditTrail {
   id: number;
-  incident_title: string;
+  incident_title: string | null;
   aksi: string;
   data_baru: string;
   created_at: string;
+  user_id: number;
+  actor_name?: string;
 }
 
-type SortColumn = "created_at" | "judul" | "status" | "severity_level" | "aksi";
+type SortColumn =
+  | "created_at"
+  | "judul"
+  | "status"
+  | "severity_level"
+  | "aksi"
+  | "actor_name"
+  | "reporter_name";
 type SortDirection = "asc" | "desc";
 
 export function IncidentTable({
@@ -274,10 +284,8 @@ export function IncidentTable({
     if (
       currentUser.role === "Operator" &&
       Number(log.reporter_id) !== currentUser.id
-    ) {
+    )
       return false;
-    }
-
     return (
       (filterStatus === "ALL" || log.status === filterStatus) &&
       (filterSeverity === "ALL" || log.severity_level === filterSeverity) &&
@@ -393,6 +401,7 @@ export function IncidentTable({
         "ID Insiden": log.id,
         "Waktu Laporan": new Date(log.created_at).toLocaleString("id-ID"),
         Judul: log.judul,
+        Pelapor: log.reporter_name || `User ID: ${log.reporter_id}`,
         Status: log.status,
         "Tingkat Urgensi": log.severity_level,
         "Deskripsi Masalah": log.deskripsi,
@@ -402,6 +411,7 @@ export function IncidentTable({
         { wch: 10 },
         { wch: 20 },
         { wch: 35 },
+        { wch: 20 },
         { wch: 15 },
         { wch: 15 },
         { wch: 50 },
@@ -421,10 +431,16 @@ export function IncidentTable({
           detailMessage = trail.data_baru;
         }
 
+        const isUserLog =
+          trail.aksi?.includes("USER") || trail.aksi?.includes("PROFILE");
+
         return {
           "ID Audit": trail.id,
           "Waktu Log": new Date(trail.created_at).toLocaleString("id-ID"),
-          "Insiden Terkait": trail.incident_title || "N/A (Terhapus)",
+          Aktor: trail.actor_name || `User ID: ${trail.user_id}`,
+          "Insiden Terkait": isUserLog
+            ? "Sistem (Manajemen Pengguna)"
+            : trail.incident_title || "N/A (Terhapus)",
           "Aksi Sistem": trail.aksi,
           "Detail Perubahan": detailMessage,
         };
@@ -433,7 +449,8 @@ export function IncidentTable({
       columnWidths = [
         { wch: 10 },
         { wch: 20 },
-        { wch: 40 },
+        { wch: 20 },
+        { wch: 35 },
         { wch: 20 },
         { wch: 60 },
       ];
@@ -443,10 +460,8 @@ export function IncidentTable({
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     worksheet["!cols"] = columnWidths;
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -463,11 +478,7 @@ export function IncidentTable({
       )}
 
       <div
-        className={`bg-white shadow-sm overflow-hidden flex flex-col ${
-          viewMode === "active"
-            ? "border border-slate-200 rounded-xl"
-            : "border-x border-b border-slate-200 rounded-b-xl"
-        }`}
+        className={`bg-white shadow-sm overflow-hidden flex flex-col ${viewMode === "active" ? "border border-slate-200 rounded-xl" : "border-x border-b border-slate-200 rounded-b-xl"}`}
       >
         {activeTab === "ACTIVE" ? (
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50/50">
@@ -483,7 +494,6 @@ export function IncidentTable({
               isCustomSorted={isCustomSorted}
               onResetSort={handleResetSort}
             />
-
             {currentUser.role === "Manager" && (
               <div className="w-full sm:w-auto px-4 pb-4 sm:p-0 sm:pr-6 flex justify-end">
                 <button
@@ -505,7 +515,6 @@ export function IncidentTable({
                 ? "Laporan Terhapus"
                 : "Catatan Audit Sistem"}
             </span>
-
             <div className="flex items-center gap-2">
               {currentUser.role === "Manager" && (
                 <button
@@ -518,7 +527,6 @@ export function IncidentTable({
                   Ekspor Riwayat
                 </button>
               )}
-
               {isCustomSorted && (
                 <button
                   onClick={handleResetSort}
@@ -537,13 +545,7 @@ export function IncidentTable({
         <div className="overflow-x-auto min-h-100">
           <table className="w-full text-left table-auto">
             <thead
-              className={`text-xs font-semibold uppercase border-b border-gray-200 select-none ${
-                activeTab === "ACTIVE"
-                  ? "bg-gray-50 text-gray-500"
-                  : activeTab === "DELETED"
-                    ? "bg-red-50/50 text-red-700"
-                    : "bg-purple-50/50 text-purple-700"
-              }`}
+              className={`text-xs font-semibold uppercase border-b border-gray-200 select-none ${activeTab === "ACTIVE" ? "bg-gray-50 text-gray-500" : activeTab === "DELETED" ? "bg-red-50/50 text-red-700" : "bg-purple-50/50 text-purple-700"}`}
             >
               {activeTab === "ACTIVE" && (
                 <tr>
@@ -595,6 +597,14 @@ export function IncidentTable({
                     </div>
                   </th>
                   <th
+                    className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap cursor-pointer hover:bg-red-100/50 transition-colors"
+                    onClick={() => handleSort("reporter_name")}
+                  >
+                    <div className="flex items-center gap-1 text-red-700">
+                      Pelapor <SortIcon column="reporter_name" />
+                    </div>
+                  </th>
+                  <th
                     className="px-4 sm:px-6 py-3 font-medium min-w-50 cursor-pointer hover:bg-red-100/50 transition-colors"
                     onClick={() => handleSort("judul")}
                   >
@@ -621,11 +631,19 @@ export function IncidentTable({
                     </div>
                   </th>
                   <th
+                    className="px-4 sm:px-6 py-3 font-medium whitespace-nowrap cursor-pointer hover:bg-purple-100/50 transition-colors"
+                    onClick={() => handleSort("actor_name")}
+                  >
+                    <div className="flex items-center gap-1 text-purple-700">
+                      Aktor <SortIcon column="actor_name" />
+                    </div>
+                  </th>
+                  <th
                     className="px-4 sm:px-6 py-3 font-medium min-w-37.5 cursor-pointer hover:bg-purple-100/50 transition-colors"
                     onClick={() => handleSort("judul")}
                   >
                     <div className="flex items-center gap-1 text-purple-700">
-                      Insiden <SortIcon column="judul" />
+                      Insiden / Target <SortIcon column="judul" />
                     </div>
                   </th>
                   <th
@@ -682,7 +700,6 @@ export function IncidentTable({
                                 </span>
                               </button>
                             )}
-
                           <button
                             onClick={() => setSelectedIncident(log)}
                             className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
@@ -692,7 +709,6 @@ export function IncidentTable({
                               info
                             </span>
                           </button>
-
                           {(currentUser.role === "Manager" ||
                             (currentUser.role === "Operator" &&
                               log.status === "OPEN")) && (
@@ -725,6 +741,9 @@ export function IncidentTable({
                           timeStyle: "short",
                         })}
                       </td>
+                      <td className="px-4 sm:px-6 py-4 font-medium">
+                        {log.reporter_name || `User ID: ${log.reporter_id}`}
+                      </td>
                       <td className="px-4 sm:px-6 py-4 font-medium line-through">
                         {log.judul}
                       </td>
@@ -754,6 +773,11 @@ export function IncidentTable({
                           ? JSON.parse(trail.data_baru)
                           : trail.data_baru;
                     } catch (e) {}
+
+                    const isUserLog =
+                      trail.aksi?.includes("USER") ||
+                      trail.aksi?.includes("PROFILE");
+
                     return (
                       <tr
                         key={trail.id}
@@ -768,17 +792,22 @@ export function IncidentTable({
                             timeStyle: "short",
                           })}
                         </td>
+                        <td className="px-4 sm:px-6 py-4 font-medium">
+                          {trail.actor_name || `User ID: ${trail.user_id}`}
+                        </td>
                         <td className="px-4 sm:px-6 py-4 font-semibold text-gray-900">
-                          {trail.incident_title || "N/A (Deleted)"}
+                          {isUserLog
+                            ? "Sistem (Manajemen Pengguna)"
+                            : trail.incident_title || "N/A (Terhapus)"}
                         </td>
                         <td className="px-4 sm:px-6 py-4">
                           <span
                             className={`px-2 py-0.5 text-[10px] font-bold rounded whitespace-nowrap ${
-                              trail.aksi === "CREATED"
+                              trail.aksi.includes("CREATE")
                                 ? "bg-green-100 text-green-800"
-                                : trail.aksi === "RESOLVED"
+                                : trail.aksi.includes("RESOLVE")
                                   ? "bg-teal-100 text-teal-800"
-                                  : trail.aksi === "ACKNOWLEDGED"
+                                  : trail.aksi.includes("ACKNOWLEDGE")
                                     ? "bg-blue-100 text-blue-800"
                                     : "bg-red-100 text-red-800"
                             }`}
@@ -796,7 +825,13 @@ export function IncidentTable({
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={
+                      activeTab === "ACTIVE"
+                        ? 5
+                        : activeTab === "DELETED"
+                          ? 5
+                          : 6
+                    }
                     className="px-6 py-12 text-center text-sm text-gray-500"
                   >
                     Tidak ada data yang tersedia di tab ini.

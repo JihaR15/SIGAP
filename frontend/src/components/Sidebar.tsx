@@ -7,6 +7,7 @@ interface SidebarProps {
   setIsMobileMenuOpen: (isOpen: boolean) => void;
   currentUser: UserSession;
   onLogout: () => void;
+  onOpenProfile: () => void;
 }
 
 export function Sidebar({
@@ -16,12 +17,16 @@ export function Sidebar({
   setIsMobileMenuOpen,
   currentUser,
   onLogout,
+  onOpenProfile,
 }: SidebarProps) {
   const menuItems = [
     { id: "overview", label: "Dashboard Metrics", icon: "dashboard" },
     { id: "incidents", label: "Tabel Insiden Aktif", icon: "table_chart" },
     ...(currentUser.role === "Manager" 
-      ? [{ id: "audit", label: "Log Audit & Sampah", icon: "history" }]
+      ? [
+          { id: "users", label: "Manajemen Pengguna", icon: "group" },
+          { id: "audit", label: "Log Audit & Sampah", icon: "history" }
+        ]
       : [])
   ];
 
@@ -93,13 +98,13 @@ export function Sidebar({
                   relative group w-full flex items-center gap-3 px-4 py-3 rounded-xl
                   font-medium text-sm transition-all duration-200
                   ${isActive 
-                    ? "text-blue-700 bg-gradient-to-r from-blue-50 to-blue-100/50" 
+                    ? "text-blue-700 bg-linear-to-r from-blue-50 to-blue-100/50" 
                     : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                   }
                 `}
               >
                 {isActive && (
-                  <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-600 to-blue-500 rounded-r-full" />
+                  <div className="absolute left-0 w-1 h-8 bg-linear-to-b from-blue-600 to-blue-500 rounded-r-full" />
                 )}
                 
                 <span className={`material-symbols-outlined text-[22px] transition-colors duration-200 ${
@@ -121,10 +126,10 @@ export function Sidebar({
         </nav>
 
         {/* User Profile Section */}
-        <div className="px-4 py-5 border-t border-slate-100 bg-gradient-to-b from-white to-slate-50/50">
+        <div className="px-4 py-5 border-t border-slate-100 bg-linear-to-b from-white to-slate-50/50">
           <div className="flex items-center gap-3 mb-4 px-2">
             <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-600 to-blue-500 flex items-center justify-center shadow-md">
                 <span className="text-white font-semibold text-sm">
                   {currentUser.nama?.charAt(0).toUpperCase() || "U"}
                 </span>
@@ -144,20 +149,36 @@ export function Sidebar({
               </div>
             </div>
           </div>
-          
-          <button
-            onClick={onLogout}
-            className="group w-full flex items-center justify-center gap-2 px-4 py-2.5 
-                       bg-gradient-to-r from-red-50 to-red-100/50 hover:from-red-100 hover:to-red-200
-                       text-red-600 rounded-xl font-semibold text-sm 
-                       transition-all duration-200 hover:shadow-md active:scale-95
-                       border border-red-200/50"
-          >
-            <span className="material-symbols-outlined text-[18px] transition-transform duration-200 group-hover:-translate-x-0.5">
-              logout
-            </span>
-            <span>Keluar</span>
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onOpenProfile();
+                setIsMobileMenuOpen(false);
+              }}
+              className="group flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 
+                         bg-white hover:bg-slate-50 border border-slate-200
+                         text-slate-600 rounded-xl font-semibold text-sm 
+                         transition-all duration-200 hover:shadow-sm active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+              <span>Profil</span>
+            </button>
+
+            <button
+              onClick={onLogout}
+              className="group flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 
+                         bg-linear-to-r from-red-50 to-red-100/50 hover:from-red-100 hover:to-red-200
+                         text-red-600 rounded-xl font-semibold text-sm 
+                         transition-all duration-200 hover:shadow-sm active:scale-95
+                         border border-red-200/50"
+            >
+              <span className="material-symbols-outlined text-[18px] transition-transform duration-200 group-hover:-translate-x-0.5">
+                logout
+              </span>
+              <span>Keluar</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>

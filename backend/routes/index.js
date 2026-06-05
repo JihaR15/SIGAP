@@ -11,9 +11,16 @@ router.post('/login', authController.login);
 
 router.post('/incidents', verifyToken, incidentController.createIncident);
 router.get('/incidents', verifyToken, incidentController.getAttentionDashboard);
-router.get('/users', verifyToken, userController.getAllUsers);
+router.put('/users/profile', verifyToken, userController.updateProfile);
 
-router.delete('/incidents/:id', verifyToken, isManager, incidentController.softDeleteIncident);
+router.get('/users', verifyToken, isManager, userController.getAllUsers);
+router.post('/users/batch', verifyToken, isManager, userController.importUsers);
+router.post('/users', verifyToken, isManager, userController.createUser);
+router.put('/users/:id', verifyToken, isManager, userController.updateUser);
+router.delete('/users/:id', verifyToken, isManager, userController.deleteUser);
+router.put('/users/:id/restore', verifyToken, isManager, userController.restoreUser);
+
+router.delete('/incidents/:id', verifyToken, incidentController.softDeleteIncident);
 router.put('/incidents/:id/acknowledge', verifyToken, isManager, incidentController.acknowledgeSingle);
 router.put('/incidents/acknowledge', verifyToken, isManager, incidentController.acknowledgeAllCritical);
 router.put('/incidents/:id/resolve', verifyToken, isManager, incidentController.resolveIncident);

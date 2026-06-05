@@ -54,6 +54,7 @@ export default async function Dashboard() {
         id: Number(session.user.id),
         nama: session.user.name || "Pengguna",
         role: session.user.role as "Manager" | "Operator",
+        username: session.user.username,
         token: session.accessToken,
       }}
     />
